@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <settings>
+        <!--缓存-->
+        <setting name="cacheEnabled" value="true"/>
+        <!--读取时间超时-->
+        <setting name="defaultStatementTimeout" value="3000"/>
+        <!--驼峰转换-->
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+        <!--允许JDBC自动生成主键-->
+        <setting name="useGeneratedKeys" value="true"/>
+    </settings>
+
+
+</configuration>
