@@ -1,0 +1,9 @@
+server:
+  port: 6700
+
+spring:
+  data:
+    elasticsearch:
+      cluster-nodes: 10.190.180.240:9200
+      repositories:
+        enabled: true
