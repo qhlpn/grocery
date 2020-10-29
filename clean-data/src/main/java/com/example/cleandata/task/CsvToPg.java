@@ -35,7 +35,7 @@ public class CsvToPg {
         ArrayList<IpSegment> ips = cleanData01(data);
         log.info("ok ips length: " + ips.size());
         // operate pg
-        // savePg01(ips);
+        savePg01(ips);
     }
 
     private ArrayList<String> readCsv01(String filePath) {
@@ -55,6 +55,9 @@ public class CsvToPg {
     private ArrayList<IpSegment> cleanData01(ArrayList<String> data) {
         ArrayList<IpSegment> ipSegments = new ArrayList<>();
         ArrayList<String> errorIps = new ArrayList<>();
+        HashSet<Long> first = new HashSet<>();
+        HashSet<String> dupIds = new HashSet<>();
+        long seqNumber = 5000000000L;
         int blankCnt = 0;
         int ipv6Cnt = 0;
         for (String ip : data) {
@@ -73,6 +76,14 @@ public class CsvToPg {
                     int locationId = Integer.parseInt(location);
                     IpSegment ipSegment = IpUtils.getcidrstartandend(cIdr);
                     if (ipSegment != null) {
+                        if (first.contains(ipSegment.getSegmentId())) {
+                            dupIds.add(cIdr.split("/")[0]);
+                            ipSegment.setSegmentId(seqNumber);
+                            first.add(seqNumber);
+                            seqNumber++;
+                        } else {
+                            first.add(ipSegment.getSegmentId());
+                        }
                         ipSegment.setLocationId(locationId);
                         ipSegments.add(ipSegment);
                     } else {
@@ -83,11 +94,19 @@ public class CsvToPg {
         }
         log.info("blank Cnt : " + blankCnt);
         log.info("ipv6 Cnt : " + ipv6Cnt);
+
         log.info("error ips Cnt : " + errorIps.size());
-        StringBuilder sb = new StringBuilder();
-        sb.append("error ips : ");
-        errorIps.forEach(v -> sb.append(v).append("; "));
-        log.info(sb.toString());
+        StringBuilder error = new StringBuilder();
+        error.append("error ips : ");
+        errorIps.forEach(v -> error.append(v).append("; "));
+        log.info(error.toString());
+
+        log.info("dupIds ips Cnt : " + dupIds.size());
+        StringBuilder dups = new StringBuilder();
+        dups.append("dupIds ips : ");
+        dupIds.forEach(v -> dups.append(v).append("; "));
+        log.info(dups.toString());
+
         return ipSegments;
     }
 

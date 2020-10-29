@@ -13,9 +13,9 @@ public class IpUtils {
 
     public static long ipv4ToLong(String ip) {
         byte[] b = new byte[4];
-        String[] ip_arr = ip.split("\\.");
-        for (int i = ip_arr.length - 1; i > -1; i--) {
-            b[i] = new Integer(ip_arr[i]).byteValue();
+        String[] ipArr = ip.split("\\.");
+        for (int i = ipArr.length - 1; i > -1; i--) {
+            b[i] = new Integer(ipArr[i]).byteValue();
         }
         return (b[3] & 0xFFL) | ((b[2] << 8) & 0xFF00L) | ((b[1] << 16) & 0xFF0000L) | ((b[0] << 24) & 0xFF000000L);
     }
@@ -48,8 +48,7 @@ public class IpUtils {
                 long ip = ipv4ToLong(ipStr);
                 int maskBit = 32 - Integer.parseInt(maskBitStr);
 
-                if (ip % (1L << maskBit) != 0
-                        || ip % (1L << (maskBit + 1)) == 0) {
+                if (ip % (1L << maskBit) != 0) {
                     return null;
                 }
 
