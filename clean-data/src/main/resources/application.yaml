@@ -1,0 +1,15 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://192.168.90.215:5432/postgres??useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull
+    username: ctcloudet_w
+    password: asdasd23+asdafs+@@#
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    show-sql: true
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQL9Dialect
+        temp:
+          use_jdbc_metadata_defaults: false
