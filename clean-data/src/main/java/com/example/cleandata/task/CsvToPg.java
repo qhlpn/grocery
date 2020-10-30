@@ -6,13 +6,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.List;
+import java.util.*;
 
 
 /**
@@ -26,19 +24,22 @@ public class CsvToPg {
     @Autowired
     private JdbcTemplate jdbc;
 
-    public void action01() {
+    @Autowired
+    private TransactionTemplate tx;
+
+    public void action() {
         // read csv
         String filePath = "C:\\Users\\QiuHongLong\\Desktop\\ip_area_isp.csv";
-        ArrayList<String> data = readCsv01(filePath);
+        ArrayList<String> data = readCsv(filePath);
         log.info("read csv length: " + data.size());
         // clean data
-        ArrayList<IpSegment> ips = cleanData01(data);
+        ArrayList<IpSegment> ips = cleanData(data);
         log.info("ok ips length: " + ips.size());
         // operate pg
-        savePg01(ips);
+        savePg(ips);
     }
 
-    private ArrayList<String> readCsv01(String filePath) {
+    private ArrayList<String> readCsv(String filePath) {
         ArrayList<String> data = new ArrayList<>();
         try (FileInputStream fis = new FileInputStream(new File(filePath))) {
             BufferedReader br = new BufferedReader(new InputStreamReader(fis, StandardCharsets.UTF_8));
@@ -52,7 +53,7 @@ public class CsvToPg {
         return data;
     }
 
-    private ArrayList<IpSegment> cleanData01(ArrayList<String> data) {
+    private ArrayList<IpSegment> cleanData(ArrayList<String> data) {
         ArrayList<IpSegment> ipSegments = new ArrayList<>();
         ArrayList<String> errorIps = new ArrayList<>();
         HashSet<Long> first = new HashSet<>();
@@ -110,21 +111,23 @@ public class CsvToPg {
         return ipSegments;
     }
 
-    private void savePg01(ArrayList<IpSegment> ips) {
+    private void savePg(ArrayList<IpSegment> ips) {
         int totalSize = ips.size();
         int batchSize = 100000;
         int currentSize = 0;
-        String sql = "insert into util_ip_segment (segment_id, start_id, end_id, cidr, start_ip, end_ip, location_id, create_date) values (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "insert into util_ip_segment " +
+                "(segment_id, start_id, end_id, cidr, start_ip, end_ip, location_id, create_date) values (?, ?, ?, ?, ?, ?, ?, ?)";
         List<Object[]> batchArgs = new ArrayList<>();
         while (currentSize < totalSize) {
             int nextSize = currentSize + batchSize;
             if (nextSize < totalSize) {
                 while (currentSize < nextSize) {
                     IpSegment ip = ips.get(currentSize);
-                    batchArgs.add(new Object[]{ip.getSegmentId(), ip.getStartIdLong(), ip.getEndIdLong(), ip.getCIdr(), ip.getStartIdStr(), ip.getEndIdStr(), ip.getLocationId(), new Date()});
+                    batchArgs.add(new Object[]{ip.getSegmentId(), ip.getStartIdLong(), ip.getEndIdLong(),
+                            ip.getCIdr(), ip.getStartIdStr(), ip.getEndIdStr(), ip.getLocationId(), new Date()});
                     currentSize++;
                     if (currentSize == nextSize) {
-                        jdbc.batchUpdate(sql, batchArgs);
+                        txSavePg(sql, batchArgs);
                         log.info("operate pg currentSize: " + currentSize);
                         batchArgs.clear();
                     }
@@ -132,16 +135,31 @@ public class CsvToPg {
             } else {
                 while (currentSize < totalSize) {
                     IpSegment ip = ips.get(currentSize);
-                    batchArgs.add(new Object[]{ip.getSegmentId(), ip.getStartIdLong(), ip.getEndIdLong(), ip.getCIdr(), ip.getStartIdStr(), ip.getEndIdStr(), ip.getLocationId(), new Date()});
+                    batchArgs.add(new Object[]{ip.getSegmentId(), ip.getStartIdLong(), ip.getEndIdLong(),
+                            ip.getCIdr(), ip.getStartIdStr(), ip.getEndIdStr(), ip.getLocationId(), new Date()});
                     currentSize++;
                     if (currentSize == totalSize) {
-                        jdbc.batchUpdate(sql, batchArgs);
+                        txSavePg(sql, batchArgs);
                         log.info("operate pg currentSize: " + currentSize);
                         batchArgs.clear();
                     }
                 }
             }
         }
+    }
+
+
+    private void txSavePg(String sql, List<Object[]> batchArgs) {
+        tx.execute((txStatus) -> {
+            try {
+                jdbc.batchUpdate(sql, batchArgs);
+                return true;
+            } catch (Exception e) {
+                txStatus.setRollbackOnly();
+                log.error(e.getMessage());
+                return false;
+            }
+        });
     }
 
 

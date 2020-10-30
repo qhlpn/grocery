@@ -4,12 +4,44 @@ spring:
     username: ctcloudet_w
     password: asdasd23+asdafs+@@#
     driver-class-name: org.postgresql.Driver
-  jpa:
-    show-sql: true
-    hibernate:
-      ddl-auto: update
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQL9Dialect
-        temp:
-          use_jdbc_metadata_defaults: false
+
+
+# JDBC 常用类
+# DB管理类：     java.sql.DriverManage
+# 驱动接口:      java.sql.Driver
+# 连接接口：     java.sql.Connection
+# 语句处理接口:  java.sql.Statement / PreparedStatement
+# 结果集接口：   java.sql.ResultSet
+
+
+# PG 厂商实现
+# 驱动：        org.postgresql.Driver
+# 连接：        org.postgresql.PgConnection
+# 语句处理:     org.postgresql.PgStatement / PgPreparedStatement
+# 结果集:       org.postgresql.ResultSet
+
+
+# 1. Class.forName("org.postgresql.Driver")
+#    org.postgresql.Driver implements java.sql.Driver
+# 2. java.sql.DriverManage.registerDriver(new org.postgresql.Driver())
+# 3. DriverManage.getConnection()
+# 4. connection.createStatement() / prepareStatement()
+# 5. connection.setAutoCommit(false) + commit() + rollback()
+# 6. state.execute()
+
+
+# 事务
+# 1. JDBC 编程式
+#       conn.setAutoCommit(false) + state.execute() + conn.commit() / conn.rollback()
+#
+# 2. TransactionTemplate 编程式
+#       txTemplate.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRED) 传播属性
+#       txTemplate.execute((txStatus)->{if return true; else txStatus.setRollbackOnly + return false})
+#       注意：JDBCTemplate虽然可以取到Connection对象，但不一定是执行SQL的Connection，故JDBCTemplate使用TransactionTemplate
+#
+# 3. 声明式
+# @Transactional
+#       失效场景：非public方法则失效
+#                没指定正确的rollbackFor捕获异常，默认RuntimeException
+#                错误设置propagation传播属性，默认REQUIRED（支持当前事务，没有则新建）
+#                同一个类中非@Transactional调用@Transactional方法
