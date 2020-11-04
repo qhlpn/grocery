@@ -58,7 +58,7 @@ public class IpUtils {
                 String ipStartStr = ipv4ToStr(ipStartLong);
                 String ipEndStr = ipv4ToStr(ipEndLong);
 
-                return IpSegment.builder().segmentId(ip).cIdr(cIdr)
+                return IpSegment.builder().cIdr(cIdr)
                         .startIdLong(ipStartLong).endIdLong(ipEndLong)
                         .startIdStr(ipStartStr).endIdStr(ipEndStr).build();
 

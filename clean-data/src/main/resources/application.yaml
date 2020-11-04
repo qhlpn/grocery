@@ -1,9 +1,24 @@
 spring:
   datasource:
-    url: jdbc:postgresql://192.168.90.215:5432/postgres??useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull
+    url: jdbc:postgresql://192.168.90.215:5432/postgres?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull
     username: ctcloudet_w
     password: asdasd23+asdafs+@@#
     driver-class-name: org.postgresql.Driver
+
+
+  # ssh connect
+#  datasource:
+#    url: jdbc:postgresql://127.0.0.1:18921/ctcloudet?useUnicode=true&characterEncoding=UTF-8&zeroDateTimeBehavior=convertToNull
+#    username: iam_w
+#    password: iam_w1!2019dev
+#    driver-class-name: org.postgresql.Driver
+
+  # mysql
+#  datasource:
+#    url: jdbc:mysql://10.190.180.240:3306/grocery?serverTimezone=UTC&characterEncoding=utf-8
+#    username: root
+#    password: 123456
+#    driver-class-name: com.mysql.cj.jdbc.Driver
 
 
 # JDBC 常用类
