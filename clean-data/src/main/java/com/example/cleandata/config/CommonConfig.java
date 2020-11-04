@@ -18,6 +18,7 @@ public class CommonConfig {
         long maxDatacenterId = ~(-1L << 5);
         long maxSequenceId = ~(-1L << 12);
         long t = System.currentTimeMillis();
-        return new SnowFlake(1, 1, 1);
+        return new SnowFlake(t % maxWorkerId, t % maxDatacenterId, t % maxSequenceId);
     }
+
 }

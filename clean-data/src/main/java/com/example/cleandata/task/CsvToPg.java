@@ -6,6 +6,7 @@ import com.example.cleandata.utils.IpUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -26,11 +27,12 @@ import java.util.regex.Pattern;
 public class CsvToPg {
 
     @Autowired
-    private JdbcTemplate jdbc;
+    @Qualifier("jdbcTemplateOne")
+    JdbcTemplate jdbc;
 
     @Autowired
+    @Qualifier("transactionTemplateOne")
     private TransactionTemplate tx;
-
 
     private ArrayList<String> readCsv(String filePath) {
         ArrayList<String> data = new ArrayList<>();

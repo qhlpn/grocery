@@ -3,14 +3,14 @@ package com.example.cleandata.utils;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.context.ApplicationContextInitializer;
+import org.springframework.context.ConfigurableApplicationContext;
 
 /**
  * @author QiuHongLong
  */
-@Component
 @Slf4j
-public class SshUtils {
+public class SshUtils implements ApplicationContextInitializer {
 
     public SshUtils() {
         try {
@@ -26,4 +26,8 @@ public class SshUtils {
     }
 
 
+    @Override
+    public void initialize(ConfigurableApplicationContext configurableApplicationContext) {
+
+    }
 }

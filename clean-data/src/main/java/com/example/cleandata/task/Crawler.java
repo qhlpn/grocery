@@ -6,11 +6,11 @@ import com.example.cleandata.pojo.Location;
 import com.example.cleandata.utils.HttpUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
-import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -35,6 +35,7 @@ public class Crawler {
     private static final String FILE_PATH = "C:\\Users\\QiuHongLong\\Desktop\\area_lng_lat.csv";
 
     @Autowired
+    @Qualifier("jdbcTemplateOne")
     JdbcTemplate jdbcTemplate;
 
     public void action01() {
