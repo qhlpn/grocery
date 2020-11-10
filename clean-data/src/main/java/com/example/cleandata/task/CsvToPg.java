@@ -109,7 +109,8 @@ public class CsvToPg {
                                 // 只有先 find 置状态位后才能 group, 不然报错
                                 isp = matcher.group(5);
                             }
-                            if (StringUtils.isNotBlank(isp)) {
+                            if (StringUtils.isNotBlank(isp)
+                                    && !"\" \"".equals(isp)) {
                                 ipSegment.setIsp(isp);
                             } else {
                                 ipSegment.setIsp("default");
