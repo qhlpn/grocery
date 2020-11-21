@@ -74,8 +74,8 @@
     count count_values（对value计数）
     topk bottomk
     quantile（分位数）
-    without 计算结果中移除的标签
-    by 计算结果中保留的标签
+    without 分组，计算结果中移除的标签
+    by 分组，计算结果中保留的标签
     ```
   
   + 操作运算符

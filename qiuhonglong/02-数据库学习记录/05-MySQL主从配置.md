@@ -14,11 +14,11 @@
   > 3. Slave **IO线程** 将日志数据写入 relaylog，并将Master最新的日志文件名和位置等元信息写入 Master Info
   > 4. Slave **SQL线程** 实时检测 relaylog 并执行 SQL语句写入数据库
 
-  <img src="/pictures/051.png" style="zoom: 67%;" />
+  <img src="./pictures/051.png" style="zoom: 67%;" />
 
   > 同个流程，另一个视图：
 
-<img src="/pictures/052.png" style="zoom:50%;" />
+<img src="./pictures/052.png" style="zoom:50%;" />
 
 + **主从搭建**
 
