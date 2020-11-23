@@ -1,5 +1,6 @@
 package com.example.cleandata.task;
 
+import com.example.cleandata.task.CsvToPgTest.Inner;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -13,7 +14,10 @@ class CrawlerTest {
 
     @Test
     void action() {
-//        crawler.action01();
+
+        int b = new Inner().b;
+        int a = Inner.a;
+
     }
 
 

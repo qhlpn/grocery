@@ -295,7 +295,7 @@ typedef struct redisObject {
 
 
 
-### Redis 高并发
+### Redis 高性能、高可用
 
 > **【集群 + 主从】**: Redis cluster 支撑 N 个 Redis master node，每个 master node 都可以挂载多个 slave node 
 
@@ -307,7 +307,7 @@ typedef struct redisObject {
 
 + **redis.conf**
 
-  ```
+  ```shell
   # 开启 无磁盘化 全量复制，直接在内存中生成 RDB
   repl-diskless-sync yes
   
@@ -323,7 +323,7 @@ typedef struct redisObject {
 
   ```shell
   # master redis.conf
-  bind 127.0.0.1  # 注释掉，即 0.0.0.0
+  bind 127.0.0.1  # 注释掉，即 bind 0.0.0.0
   daemonize no    # yes 时 docker -d 启动失败
   requirepass 123456  # 访问密码
   maxclients <>   # 最大连接数
@@ -332,7 +332,7 @@ typedef struct redisObject {
   appendonly yes  # 开启 AOF
   
   # slave redis.conf 除了上面，还有
-  replicaof 172.17.0.6 6379
+  replicaof 172.17.0.6 6379 # 作为哪个主节点的从节点
   masterauth 123456
   
   # redis 6.09
@@ -340,7 +340,6 @@ typedef struct redisObject {
   # docker redis 默认无配置文件，需手动 redis-server 指定开启
   
   $ docker run -d -p 6378:6379 -v /opt/redis/redis02/conf/redis.conf:/etc/redis/redis.conf -v /opt/redis/redis02/data/:/data redis redis-server /etc/redis/redis.conf
-  # docker redis 默认无配置文件，需手动 redis-server 指定开启
   
   $ redis-cli
   $ auth 123456
@@ -348,22 +347,24 @@ typedef struct redisObject {
   $ set username nick   # master set
   $ get username        # slave get
   ```
-
+  
 + **集群架构（ Redis-Cluster 数据分片 ）**
 
-  + **Master 节点间内部通信**
+  + **数据一致性协议**
 
-    + **集中式**
+    + **gossip 协议**
 
-      > 将元数据（节点信息、故障信息）统一存储在组件上进行维护，比如 zookeeper。优点：时效性好。缺点：组件接收更新元数据请求的压力大。
+      > 集中式：将元数据（节点信息、故障信息）统一存储在组件上进行维护，比如 zookeeper。优点：时效性好。缺点：组件接收更新元数据请求的压力大。
 
       <img src="E:\projects\alogic-spec\alogic-highlight\qiuhonglong\02-数据库学习记录\pictures\image-20201120104130657.png" alt="image-20201120104130657" style="zoom:70%;" />
 
-    + **gossip 协议【Redis-Cluster 使用】**
+      > gossip：所有节点持有一份元数据，当节点更新了数据，就通知其它节点进行 **数据同步** 。优点：分散节点更新i元数据的请求。缺点：更新有时延滞后。
+    >
+      > 传播机制：**周期** 发送 + **固定** 个数 + **随机** 路线。log(20)(base 4) = 2.16，表示集群中有20个节点，受感染节点每周期会随机向另外4个节点（可以重复感染）成功同步数据。全部感染最少需要2.16个周期。
 
-      > 所有节点持有一份元数据，当节点更新了数据，就通知其它节点进行数据同步。优点：分散节点更新元数据的请求。缺点：更新有时延滞后。
+      <img src="E:\projects\grocery\qiuhonglong\02-数据库学习记录\pictures\image-20201123152634723.png" alt="image-20201123152634723" style="zoom: 33%;" />
 
-      <img src="E:\projects\alogic-spec\alogic-highlight\qiuhonglong\02-数据库学习记录\pictures\image-20201120105035293.png" alt="image-20201120105035293" style="zoom:77%;" />
+  
 
   + **分布式寻址算法**
 
@@ -377,19 +378,98 @@ typedef struct redisObject {
 
     + **Hash Slot【Redis-Cluster 使用】**
 
-      > 
+      
 
-+ 
++ **Redis-Cluster 搭建**
+
+  + **原生搭建**
+
+    ```shell
+    # common 配置
+    bind 0.0.0.0
+    daemonize no
+    requirepass 123456
+    masterauth 123456
+    maxmemory-policy volatile-lru
+    appendonly yes
+    # cluster 配置
+    cluster-enabled yes
+    cluster-config-file cluster.conf    # 保存集群配置
+    cluster-node-timeout 15000          # 节点不可访问的最大时间
+    cluster-replica-validity-factor 10  # 集群副本有效因子
+    cluster-require-full-coverage  no   # 节点全活时集群功能才有效 no
+    
+    $ docker run -d -p 637x:6379 -v /opt/redis/redis.conf:/etc/redis/redis.conf redis redis-server /etc/redis/redis.conf
+    
+    $ reids-cli
+    $ auth 123456
+    
+    # 节点加入集群
+    $ cluster nodes  # 查看集群下的节点
+    $ cluster meet redis-ip:port # 邀请其它节点接入集群
+    
+    # 指派槽位
+    $ cluster addslots slot-number
+    # assign-slot.sh 
+    start=$1
+    end=$2
+    for slot in `seq ${start} ${end}`
+    do
+        echo "slot:${slot}"
+        /usr/local/bin/redis-cli -h 127.0.0.1 -p 6379 -a 123456 cluster addslots ${slot}
+    done
+    $ sh assign-slot.sh 0 5461
+    $ sh assign-slot.sh 5462 10922
+    $ sh assign-slot.sh 10923 16383
+    $ cluster nodes
+    
+    # 指定从机
+    $ cluster replicate master-id # 指定当前节点作为主节点的从机
+    ```
+
+  + **快速搭建**
+
+    ```shell
+    # 启动集群 cluster create 指令
+    $ redis-cli --cluster create 172.17.0.6:6379 172.17.0.7:6379 172.17.0.8:6379 172.17.0.9:6379 172.17.0.10:6379 172.17.0.11:6379 --cluster-replicas 1 -a 123456 # --cluster-replicas 2 一主二从
+    
+    # 新节点加入集群 cluster add-node 指令
+    $ redis-cli --cluster add-node 172.17.0.12:6379 172.17.0.6:6379 --cluster-master-id masterId -a 123456 # [newNode oldNode] --cluster-master-id 指定主节点ID，若不指定则加入集群后称为主节点
+    
+    # 迁移槽位和数据 cluster reshard 指令
+    $ redis-cli --cluster reshard 172.17.0.12:6379 -a 123456  # 扩容时
+    $ redis-cli --cluster reshard --cluster-from sendId --cluster-to recieveId --cluster-slots slotNum recieveIp:Port -a 123456
+    
+    # 集群停机节点 cluster delete 指令
+    redis-cli --cluster del-node 172.17.0.12:6379 edc8ff41aef320beb5081c5b50bf32485a7ffb9e -a 123456
+    ```
 
 ### Redis 高可用
 
 + **Sentinel 哨兵**
 
-  > 作用：自动故障转移、集群监控、消息通知
-  >
-  > Redis 哨兵 + 主从 的部署架构，不能保证数据零丢失，只能保证集群高可用。哨兵 Pick CA
-  >
-  > 同时，哨兵自身需要分布式集群部署，至少3个实例
+  > Redis 主备模式下，当 master 宕机时，写服务无法使用，需要手动切换。Sentienl 则可以实现自动主备切换。
+
+  <img src="E:\projects\grocery\qiuhonglong\02-数据库学习记录\pictures\image-20201123173522070.png" alt="image-20201123173522070" style="zoom:75%;" />
+
+  + **Sentinels 集群**
+
+    + **Raft 分布式一致性**
+
+      > 解决问题：对集群进行操作时如何保证各节点数据的一致性
+      >
+      > 核心概念：选举任期、超过半数、节点状态【跟随者、候选者、领导者】
+      >
+      > https://mp.weixin.qq.com/s/4Da9NEtDzNA70dU6e7CWGw
+
+      + **Leader选举**：每个跟随着节点 **随机的选举超时** 时间，直到仅有一个节点 **最先** 发起候选投票，**超过半数** 节点同意则晋升为领导者。领导者是分布式系统的 **操作入口** 。
+      + **日志复制**：客户端想更新数据，Leader 先记录日志，此时状态为 uncommitted；并将日志同步给 Fllower节点，当超过半数节点同步日志时，Leader 状态变为 commited 并更新的数据；最后通知其它所有节点更新数据至集群状态一致。
+      + **网络分区**：不同分区下的节点会**各自选举**，产生多个 Leader；当网络恢复正常时，选举任期高的 Leader 留下，其它 Leader 转化为 Follower，并根据 uncommitted 日志进行操作回滚；最后同步所有节点。
+
+  + **Redis 主备切换**
+
+    + 投票协议
+    + 选举协议
 
   
 

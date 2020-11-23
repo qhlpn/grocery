@@ -8,6 +8,12 @@ import org.springframework.boot.test.context.SpringBootTest;
 @SpringBootTest
 class CsvToPgTest {
 
+    public static class Inner {
+
+        public static int a;
+        public int b;
+    }
+
     @Autowired
     CsvToPg csvToPg;
 
