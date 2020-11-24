@@ -4,7 +4,7 @@
 
   > master - slave：全量复制 + 增量复制 + 异步复制 + 断点续传
 
-  ![](.\pictures\066.png)
+  ![](.\pictures\071.png)
 
   + **redis.conf**
 
@@ -53,7 +53,7 @@
 
   > Redis 主备模式下，当 master 宕机时，写服务无法使用，需要手动切换。Sentienl 则可以实现自动主备切换。
 
-  <img src=".\pictures\067.png" style="zoom:75%;" />
+  <img src=".\pictures\072.png" style="zoom:75%;" />
 
   + **Sentinels 集群**
 
@@ -63,51 +63,53 @@
       >
       > 核心概念：选举任期、超过半数、节点状态【跟随者、候选者、领导者】
       >
-      
-+ **Leader选举**：每个跟随着节点 **随机的选举超时** 时间，直到仅有一个节点 **最先** 发起候选投票，**超过半数** 节点同意则晋升为领导者。领导者是分布式系统的 **操作入口** 。
-      + **日志复制流程**：客户端想更新数据，Leader **先记录**日志，此时状态为 **uncommitted**；并将日志同步给 Fllower节点，当超过半数节点同步日志时，Leader 状态变为 **commited** **再更新**数据；最后通知其它所有节点更新数据至集群状态一致。
+
+      + **Leader选举**：每个跟随着节点 **随机的选举超时** 时间，直到仅有一个节点 **最先** 发起候选投票，**超过半数** 节点同意则晋升为领导者。领导者是分布式系统的 **操作入口** 。
+      + **日志复制流程**：客户端想更新数据，Leader **先记录**日志，此时状态为 **uncommitted**；并将日志同步给 Fllower节点，当超过半数节点同步日志时，Leader 状态变为 **commited** **再更新**数据；最后通知其它所有节点更新数据至集群状态一致。    
       + **网络分区容错**：不同分区下的节点会 **各自选举**，产生多个 Leader；当网络恢复正常时，选举任期高的 Leader 留下，其它 Leader 转化为 Follower，并根据 uncommitted 日志进行操作回滚；最后同步所有节点。
+
+      + **故障转移执行者**
+
+        > 当哨兵 ping redis-master 超过 ```is-master-down-after-milliseconds``` 时则主观认为 master 宕机，并通知其它哨兵。当某哨兵接收 **超过半数** 的宕机通知，则开启 **执行故障转移的哨兵选举** 流程。
+
+    + **哨兵注册发现**
       
-    + **故障转移执行者**
+      > 通过 redis 的**发布/订阅系统**实现， 即监听 ```__sentinel__:hello``` 管道。
+
+  + **Redis 主备切换**
     
-  > 当哨兵 ping redis-master 超过 ```is-master-down-after-milliseconds``` 时则主观认为 master 宕机，并通知其它哨兵。当某哨兵接收 **超过半数** 的宕机通知，则开启 **执行故障转移的哨兵选举** 流程。
+    + **Master 选举算法**
     
-+ **哨兵注册发现**
+      > 对 slave 的相关信息进行排序：
+        >
+        > 1. 与 master 断开连接的时长，越短优先级越高
+        > 2. slave priority 值越低，优先级越高
+        > 3. replica offset 同步数据越多，优先级越高
     
-  > 通过 redis 的**发布/订阅系统**实现， 即监听 ```__sentinel__:hello``` 管道。
+  + **数据丢失问题**
     
-+ **Redis 主备切换**
-  
-  + **Master 选举算法**
-  
-    > 对 slave 的相关信息进行排序：
-      >
-      > 1. 与 master 断开连接的时长，越短优先级越高
-      > 2. slave priority 值越低，优先级越高
-      > 3. replica offset 同步数据越多，优先级越高
-  
-+ **数据丢失问题**
-  
-  > Sentinel 只能保证 Redis 主从可用，不保证数据零丢失，是 AP 模型
-  
-  + **异步数据复制**：master 在部分数据还未同步到 slave 前就宕机
+    > Sentinel 只能保证 Redis 主从可用，不保证数据零丢失，是 AP 模型
+    
+    + **异步数据复制**：master 在部分数据还未同步到 slave 前就宕机
     + **多个master（脑裂）**：master 与集群网络分区时，哨兵会再选举出新的 master；当分区结束时，旧的 master 会作为 slave，清空自身数据，挂到新的 master 上，从而丢失 **分区期间** 接收到的客户端数据。
-  
-  > 解决方法：`min-slaves-to-write 1`        `min-slaves-max-lag 10` 
-    >
-    > 要求主机至少有1个从机，同时数据同步时的延迟不能超过10s，否则主机拒绝写请求。
+    
+    > 解决方法：`min-slaves-to-write 1`        `min-slaves-max-lag 10` 
+      >
+      > 要求主机至少有1个从机，同时数据同步时的延迟不能超过10s，否则主机拒绝写请求。
+    
+    
 
 ### Redis Cluster
 
 > **集群 + 主从**：Redis cluster 支撑 N 个 Redis master node，每个 master node 可以挂载多个 slave node，实现了高可用和高性能 
 
-+ **数据一致性协议**
++ **数据一致性**
 
   + **gossip 协议**
 
     > 集中式：将元数据（节点信息、故障信息）统一存储在组件上进行维护，比如 zookeeper。优点：时效性好。缺点：组件接收更新元数据请求的压力大。
 
-    <img src=".\pictures\068.png" style="zoom:70%;" />
+    <img src=".\pictures\073.png" style="zoom:70%;" />
 
     > gossip：所有节点持有一份元数据，当节点更新了数据，就通知其它节点进行 **数据同步** 。优点：分散节点更新i元数据的请求。缺点：更新有时延滞后。
 
@@ -115,7 +117,7 @@
 
     > 传播机制：**周期** 发送 + **固定** 个数 + **随机** 路线。log(20)(base 4) = 2.16，表示集群中有20个节点，受感染节点每周期会随机向另外4个节点（可以重复感染）成功同步数据。全部感染最少需要2.16个周期。
 
-    <img src=".\pictures\069.png" style="zoom: 30%;" />
+    <img src=".\pictures\074.png" style="zoom: 30%;" />
 
 + **分布式寻址算法**
 
@@ -125,7 +127,7 @@
 
     + **虚拟节点**：解决 **节点过少哈希不均匀造成的缓存倾斜存储问题** 。对每个节点（比如将信息进行虚拟映射扩充）计算多个哈希值，虚拟节点均匀定位到哈希环上，实现负载均衡。
 
-    <img src=".\pictures\070.png" style="zoom:45%;" />
+    <img src=".\pictures\075.png" style="zoom:45%;" />
 
   + **Hash Slot【Redis-Cluster 使用】**
 
