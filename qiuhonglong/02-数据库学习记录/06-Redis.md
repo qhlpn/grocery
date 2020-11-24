@@ -116,12 +116,12 @@ typedef struct redisObject {
 
 + **单线程：事件驱动 + IO多路复用**
 
-  <img src="E:\projects\alogic-spec\alogic-highlight\qiuhonglong\02-数据库学习记录\pictures\image-20201112155956072.png" alt="image-20201112155956072" style="zoom: 40%;" />
+  <img src=".\pictures\image-20201112155956072.png" alt="image-20201112155956072" style="zoom: 40%;" />
 
   > Redis 的文件事件处理器 Event Loop是基于事件驱动，是单线程模型
   > 同时，socket上基于IO多路复用产生事件源，也是单线程
 
-  <img src="E:\projects\alogic-spec\alogic-highlight\qiuhonglong\02-数据库学习记录\pictures\image-20201112160443909.png" style="zoom: 67%;" />
+  <img src=".\pictures\image-20201112160443909.png" style="zoom: 67%;" />
 
 + **单线程与多线程**
 
@@ -297,88 +297,117 @@ typedef struct redisObject {
 
 ### Redis 高性能、高可用
 
-> **【集群 + 主从】**: Redis cluster 支撑 N 个 Redis master node，每个 master node 都可以挂载多个 slave node 
-
 + **主从架构（ 读写分离 ）**
 
   > master - slave：全量复制 + 增量复制 + 异步复制 + 断点续传
 
-  ![image-20201116172412257](E:\projects\alogic-spec\alogic-highlight\qiuhonglong\02-数据库学习记录\pictures\image-20201116172412257.png)
+  ![image-20201116172412257](.\pictures\image-20201116172412257.png)
 
-+ **redis.conf**
+  + **redis.conf**
 
-  ```shell
-  # 开启 无磁盘化 全量复制，直接在内存中生成 RDB
-  repl-diskless-sync yes
+    ```shell
+    # 开启 无磁盘化 全量复制，直接在内存中生成 RDB
+    repl-diskless-sync yes
+    
+    # 等待 5s 后再开始复制，用于多 slave 连接
+    repl-diskless-sync-delay 5
+    
+    # 停止复制情况：rdb文件传输时间超过 60s
+    #            异步复制所需内存持续超过 64M、一次性超过 256M
+    client-output-buffer-limit slave 256MB 64MB 60
+    ```
+
+  + **主从搭建**
+
+    ```shell
+    # master redis.conf
+    bind 127.0.0.1  # 注释掉，即 bind 0.0.0.0
+    daemonize no    # yes 时 docker -d 启动失败
+    requirepass 123456  # 访问密码
+    maxclients <>   # 最大连接数
+    maxmemory <>	# 最大内存
+    maxmemory-policy volatile-lru # 内存淘汰策略
+    appendonly yes  # 开启 AOF
+    
+    # slave redis.conf 除了上面，还有
+    replicaof 172.17.0.6 6379 # 作为哪个主节点的从节点
+    masterauth 123456
+    
+    # redis 6.09
+    $ docker run -d -p 6379:6379 -v /opt/redis/redis01/conf/redis.conf:/etc/redis/redis.conf -v /opt/redis/redis01/data/:/data redis redis-server /etc/redis/redis.conf
+    # docker redis 默认无配置文件，需手动 redis-server 指定开启
+    
+    $ docker run -d -p 6378:6379 -v /opt/redis/redis02/conf/redis.conf:/etc/redis/redis.conf -v /opt/redis/redis02/data/:/data redis redis-server /etc/redis/redis.conf
+    
+    $ redis-cli
+    $ auth 123456
+    
+    $ set username nick   # master set
+    $ get username        # slave get
+    ```
+
++ **Sentinel 哨兵**
+
+  > Redis 主备模式下，当 master 宕机时，写服务无法使用，需要手动切换。Sentienl 则可以实现自动主备切换。
+
+  <img src=".\pictures\image-20201123173522070.png" alt="image-20201123173522070" style="zoom:75%;" />
+
+  + **Sentinels 集群**
+
+    + **Raft 分布式一致性**
+
+      > 解决问题：对集群进行操作时如何保证各节点数据的一致性
+      >
+      > 核心概念：选举任期、超过半数、节点状态【跟随者、候选者、领导者】
+      >
+      > https://mp.weixin.qq.com/s/4Da9NEtDzNA70dU6e7CWGw
+
+      + **Leader选举**：每个跟随着节点 **随机的选举超时** 时间，直到仅有一个节点 **最先** 发起候选投票，**超过半数** 节点同意则晋升为领导者。领导者是分布式系统的 **操作入口** 。
+      + **日志复制**：客户端想更新数据，Leader 先记录日志，此时状态为 uncommitted；并将日志同步给 Fllower节点，当超过半数节点同步日志时，Leader 状态变为 commited 并更新的数据；最后通知其它所有节点更新数据至集群状态一致。
+      + **网络分区**：不同分区下的节点会**各自选举**，产生多个 Leader；当网络恢复正常时，选举任期高的 Leader 留下，其它 Leader 转化为 Follower，并根据 uncommitted 日志进行操作回滚；最后同步所有节点。
+
+  + **Redis 主备切换**
+
+    + **投票协议**
+    + **选举协议**
+
   
-  # 等待 5s 后再开始复制，用于多 slave 连接
-  repl-diskless-sync-delay 5
-  
-  # 停止复制情况：rdb文件传输时间超过 60s
-  #            异步复制所需内存持续超过 64M、一次性超过 256M
-  client-output-buffer-limit slave 256MB 64MB 60
-  ```
 
-+ **主从搭建**
+### Redis Cluster
 
-  ```shell
-  # master redis.conf
-  bind 127.0.0.1  # 注释掉，即 bind 0.0.0.0
-  daemonize no    # yes 时 docker -d 启动失败
-  requirepass 123456  # 访问密码
-  maxclients <>   # 最大连接数
-  maxmemory <>	# 最大内存
-  maxmemory-policy volatile-lru # 内存淘汰策略
-  appendonly yes  # 开启 AOF
-  
-  # slave redis.conf 除了上面，还有
-  replicaof 172.17.0.6 6379 # 作为哪个主节点的从节点
-  masterauth 123456
-  
-  # redis 6.09
-  $ docker run -d -p 6379:6379 -v /opt/redis/redis01/conf/redis.conf:/etc/redis/redis.conf -v /opt/redis/redis01/data/:/data redis redis-server /etc/redis/redis.conf
-  # docker redis 默认无配置文件，需手动 redis-server 指定开启
-  
-  $ docker run -d -p 6378:6379 -v /opt/redis/redis02/conf/redis.conf:/etc/redis/redis.conf -v /opt/redis/redis02/data/:/data redis redis-server /etc/redis/redis.conf
-  
-  $ redis-cli
-  $ auth 123456
-  
-  $ set username nick   # master set
-  $ get username        # slave get
-  ```
-  
-+ **集群架构（ Redis-Cluster 数据分片 ）**
+> **集群 + 主从**：Redis cluster 支撑 N 个 Redis master node，每个 master node 都可以挂载多个 slave node 
 
-  + **数据一致性协议**
++ **数据一致性协议**
 
-    + **gossip 协议**
+  + **gossip 协议**
 
-      > 集中式：将元数据（节点信息、故障信息）统一存储在组件上进行维护，比如 zookeeper。优点：时效性好。缺点：组件接收更新元数据请求的压力大。
+    > 集中式：将元数据（节点信息、故障信息）统一存储在组件上进行维护，比如 zookeeper。优点：时效性好。缺点：组件接收更新元数据请求的压力大。
 
-      <img src="E:\projects\alogic-spec\alogic-highlight\qiuhonglong\02-数据库学习记录\pictures\image-20201120104130657.png" alt="image-20201120104130657" style="zoom:70%;" />
+    <img src=".\pictures\image-20201120104130657.png" alt="image-20201120104130657" style="zoom:70%;" />
 
-      > gossip：所有节点持有一份元数据，当节点更新了数据，就通知其它节点进行 **数据同步** 。优点：分散节点更新i元数据的请求。缺点：更新有时延滞后。
-    >
-      > 传播机制：**周期** 发送 + **固定** 个数 + **随机** 路线。log(20)(base 4) = 2.16，表示集群中有20个节点，受感染节点每周期会随机向另外4个节点（可以重复感染）成功同步数据。全部感染最少需要2.16个周期。
+    > gossip：所有节点持有一份元数据，当节点更新了数据，就通知其它节点进行 **数据同步** 。优点：分散节点更新i元数据的请求。缺点：更新有时延滞后。
 
-      <img src="E:\projects\grocery\qiuhonglong\02-数据库学习记录\pictures\image-20201123152634723.png" alt="image-20201123152634723" style="zoom: 33%;" />
+    > gossip 消息命令有： meet、ping、pong、fail
 
-  
+    > 传播机制：**周期** 发送 + **固定** 个数 + **随机** 路线。log(20)(base 4) = 2.16，表示集群中有20个节点，受感染节点每周期会随机向另外4个节点（可以重复感染）成功同步数据。全部感染最少需要2.16个周期。
 
-  + **分布式寻址算法**
+    <img src=".\pictures\image-20201123152634723.png" alt="image-20201123152634723" style="zoom: 30%;" />
 
-    + **一致性哈希 = 哈希环 + 虚拟节点 **
++ **分布式寻址算法**
 
-      + **哈希环**：解决 **节点动态扩收容时全部节点失效需要重哈希问题** 。将节点进行哈希，定位到哈希环上，比如通过IP来哈希。缓存数据先哈希定位环上，归入顺时针方向的第一个节点中。这样收扩容时只需要对受影响数据进行转移，而不影响其它数据。
+  + **一致性哈希 = 哈希环 + 虚拟节点 **
 
-      + **虚拟节点**：解决 **节点过少哈希不均匀造成的缓存倾斜存储问题** 。对每个节点（比如将信息进行虚拟映射扩充）计算多个哈希值，虚拟节点均匀定位到哈希环上，实现负载均衡。
+    + **哈希环**：解决 **节点动态扩收容时全部节点失效需要重哈希问题** 。将节点进行哈希，定位到哈希环上，比如通过IP来哈希。缓存数据先哈希定位环上，归入顺时针方向的第一个节点中。这样收扩容时只需要对受影响数据进行转移，而不影响其它数据。
 
-      <img src="E:\projects\alogic-spec\alogic-highlight\qiuhonglong\02-数据库学习记录\pictures\image-20201120112544633.png" alt="image-20201120112544633" style="zoom:45%;" />
+    + **虚拟节点**：解决 **节点过少哈希不均匀造成的缓存倾斜存储问题** 。对每个节点（比如将信息进行虚拟映射扩充）计算多个哈希值，虚拟节点均匀定位到哈希环上，实现负载均衡。
 
-    + **Hash Slot【Redis-Cluster 使用】**
+    <img src=".\pictures\image-20201120112544633.png" alt="image-20201120112544633" style="zoom:45%;" />
 
-      
+  + **Hash Slot【Redis-Cluster 使用】**
+
+    > Redis-Cluster 将 16384 个 虚拟槽 分配给集群中的 Masters。Key 哈希取模定位到 Slot 上，机器宕机则将其 Slot 转移到其它机器上，数据不会全部失效。Key 定位的是 Slot 而不是 机器。 
+
+    
 
 + **Redis-Cluster 搭建**
 
@@ -443,35 +472,3 @@ typedef struct redisObject {
     # 集群停机节点 cluster delete 指令
     redis-cli --cluster del-node 172.17.0.12:6379 edc8ff41aef320beb5081c5b50bf32485a7ffb9e -a 123456
     ```
-
-### Redis 高可用
-
-+ **Sentinel 哨兵**
-
-  > Redis 主备模式下，当 master 宕机时，写服务无法使用，需要手动切换。Sentienl 则可以实现自动主备切换。
-
-  <img src="E:\projects\grocery\qiuhonglong\02-数据库学习记录\pictures\image-20201123173522070.png" alt="image-20201123173522070" style="zoom:75%;" />
-
-  + **Sentinels 集群**
-
-    + **Raft 分布式一致性**
-
-      > 解决问题：对集群进行操作时如何保证各节点数据的一致性
-      >
-      > 核心概念：选举任期、超过半数、节点状态【跟随者、候选者、领导者】
-      >
-      > https://mp.weixin.qq.com/s/4Da9NEtDzNA70dU6e7CWGw
-
-      + **Leader选举**：每个跟随着节点 **随机的选举超时** 时间，直到仅有一个节点 **最先** 发起候选投票，**超过半数** 节点同意则晋升为领导者。领导者是分布式系统的 **操作入口** 。
-      + **日志复制**：客户端想更新数据，Leader 先记录日志，此时状态为 uncommitted；并将日志同步给 Fllower节点，当超过半数节点同步日志时，Leader 状态变为 commited 并更新的数据；最后通知其它所有节点更新数据至集群状态一致。
-      + **网络分区**：不同分区下的节点会**各自选举**，产生多个 Leader；当网络恢复正常时，选举任期高的 Leader 留下，其它 Leader 转化为 Follower，并根据 uncommitted 日志进行操作回滚；最后同步所有节点。
-
-  + **Redis 主备切换**
-
-    + 投票协议
-    + 选举协议
-
-  
-
-
-
