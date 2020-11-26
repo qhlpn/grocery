@@ -6,10 +6,6 @@
 >
 > **[基于SpringBoot和RestHighLevelClient集成操作Elasticsearch](https://mp.weixin.qq.com/s?__biz=MzIxMjE3NjYwOQ==&mid=2247484027&idx=1&sn=efa5dfffa8db647ead9850c95b696393&chksm=974b59f5a03cd0e3684b32fe9fb2d380f9c9d9ecba34ea7e7e664597f844aebb552c2063255e&scene=178#rd)**
 
-#### 开局网上贴张思维导图......
-
-![](./pictures/011.png)
-
 #### ES 基本概念
 
 + **节点 Node** 与 **集群 Cluster**
