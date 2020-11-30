@@ -66,12 +66,14 @@
 
 <img src="E:\projects\grocery\qiuhonglong\05-消息队列\pictures\image-20201127170453911.png" alt="image-20201127170453911" style="zoom:70%;" />
 
-+ **Java Comsumer** 是**线程不安全**的，不能数据访问保护。**多线程消费**方案：
++ **多线程消费 方案**
 
-  + **同个Group中建立多个Comsumer，消息获取和消息处理耦合**
+  > **Java Consumer** 是 **线程不安全** 的，多线程时需要进行数据访问隔离保护
+
+  + **同个Group中建立多个Consumer，消息获取和消息处理耦合**
 
     <img src="E:\projects\grocery\qiuhonglong\05-消息队列\pictures\image-20201130102545260.png" alt="image-20201130102545260" style="zoom:80%;" />
-
+  
     ```java
     public class Consumer1 implements Runnable {
         private final KafkaConsumer consumer = ;
@@ -80,13 +82,13 @@
         }
     }
     executors.submit(consumer1);
-    ...
+  ...
     ```
 
-  + **单个Comsumer，多个Worker，消息获取和消息处理解耦（即 Reactor模型 = IO多路复用 + 事件驱动）**
+  + **单个Consumer，多个Worker，消息获取和消息处理解耦（即 Reactor模型 = IO多路复用 + 事件驱动）**
 
     <img src="E:\projects\grocery\qiuhonglong\05-消息队列\pictures\image-20201130174408275.png" alt="image-20201130174408275" style="zoom:80%;" />
-
+  
     ```java
     private final KafkaConsumer<String, String> consumer;
     private ExecutorService executors;
@@ -101,6 +103,35 @@
       	}
     }
     ```
+  
++ **常见参数**
+
+  ```properties
+  bootstrap.servers:	broker ip + port
+  group.id:			组id
+  key.deserializer:	key反序列化
+  value.deserializer:	value反序列化
+  request.timeout.ms:	请求等待时间，超过则可重发可失败
+  session.timeout.ms:	心跳间隔时间 dft 10s
+  max.poll.records:	每次拉取消息数 dft 500（须在session.timeout.ms内处理完）
+  fetch.max.bytes:	每次拉去最大字节数
+  enable.auto.commit:	是否自动提交位移（最好手动提交）
+  auto.offset.reset:	消息没携带偏移量时（无效）时应作何处理。latest dft 最近的记录 / earliest 最初始的记录
+  ```
+
++ **Rebalance 协议**
+
+  > 同组Group 的 消费者Consumer 如何分配 某主题Topic 的所有 消息Record
+
+  + **Rebalance 触发条件**
+    + 组Group内成员 **Consumer数量** 发生变更
+    + **订阅主题数 **发生变更
+    + 订阅主题的 **分区数** 发生变更
+  + **组内分配策略**
+    + **Range**
+    + **Round-Robin**
+    + **自定义**（人为实现主题级别消息有序）
 
 
 
+### Kafka 高可用
