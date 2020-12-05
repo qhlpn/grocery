@@ -1,6 +1,7 @@
 spring:
   kafka:
     bootstrap-servers: 10.190.180.240:9092
+    producer:
     consumer:
       auto-offset-reset: latest
       max-poll-records: 100
