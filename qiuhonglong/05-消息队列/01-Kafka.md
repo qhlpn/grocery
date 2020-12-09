@@ -275,7 +275,3 @@
 + 生产端：设置 **request.required.acks = -1**, 保证数据在集群中强一致，如果失败则不断重试 **message.send.max.retries = bigint** 
 + Broker端：开启 **Partiton 副本**冗余，即 **min.insync.replicas > 1**，防止宕机数据丢失
 
-
-
-### 
-
