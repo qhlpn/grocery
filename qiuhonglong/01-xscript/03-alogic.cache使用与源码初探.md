@@ -39,7 +39,7 @@
 //        同时，返回列表中对应的 LocalCacheStore
 Store<CacheObject> cache = CacheStoreFactory.get(cacheId);
 // Step2：从 LocalCacheStore 中获取对应的 CacheObject
-CacheObject found = cache.load(idValue)
+CacheObject found = cache.load(idValue)   // load db one row data
 // Step3：对 CacheObject 中 key-value 的 get set
 // 		  在 cache-hget、cache-hset onexecute 操作
 found.hGet()、found.hSet() 

@@ -118,7 +118,7 @@ typedef struct redisObject {
 
   <img src=".\pictures\063.png" style="zoom: 40%;" />
 
-  > Redis 的文件事件处理器 Event Loop是基于事件驱动，是单线程模型
+  > Redis 的文件事件处理器 Event Loop 是基于事件驱动，是单线程模型
   > 同时，socket上基于IO多路复用产生事件源，也是单线程
 
   <img src=".\pictures\064.png" style="zoom: 67%;" />

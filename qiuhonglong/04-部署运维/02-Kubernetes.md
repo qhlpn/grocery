@@ -32,7 +32,7 @@
     - 提供容器弹性，如果容器失效就替换它，等等
 ```
 
-+ **Master **
+##### **Master **
 
 ```
 - Master 是集群控制平台（Control Plane），负责协调集群中的所有活动，例如调度应用程序，维护应用程序的状态，扩展和更新应用程序。
@@ -51,10 +51,10 @@
             - service controller
 ```
 
-+ **Worker/Node **  
+##### **Worker/Node **  
 
 ``` 
-- 节点是虚拟机或物理计算机，充当k8s集群中的工作计算机。 
+- 节点是虚拟机或物理计算机，充当k8s集群中的工作计算机。（外网IP）
 - Worker节点应具有用于处理容器操作的工具，例如Docker。
 - 每个Worker节点都有一个Kubelet，它管理该Worker节点并负责与Master节点通信，管理 Pod（容器组）和 Pod（容器组）内运行的 Container（容器）。
 - Node 组件包括：
@@ -63,10 +63,10 @@
 	- container-engine：支持多种容器引擎，如 Docker cri-o rktlet
 ```
 
-+ **Pod**
+##### **Pod**
 
 ```
-- Pod（容器组）是 k8s 集群上的最基本的单元
+- Pod（容器组）是 k8s 集群上的最基本的单元。（内网IP）
 - 存放一组 container（可包含一个或多个 container 容器，即图上正方体。
 - 存放 container 容器的共享资源，包括：
 	- 共享存储，称为 Volumes 卷，即图上紫色圆柱
@@ -80,7 +80,7 @@
 
 <img src="https://kuboard.cn/assets/img/module_03_nodes.38f0ef71.svg" width=50% />
 
-+ **Deployment**
+##### **Deployment**
 
 ```
 - 在 k8s 集群中发布 Deployment 后，Master 的 Deployment 将指示 k8s 创建和更新应用程序 (Docker Image) 的实例 (Docker Container)，调度到集群中的具体的节点上。实例会被包含在 Pod。 
@@ -113,7 +113,7 @@ spec:	        # 这是关于该Deployment的描述，可以理解为你期待该
         image: nginx:1.7.9	# 使用镜像nginx:1.7.9创建container，该container默认80端口可访问
 ```
 
-+ **Service** 
+##### **Service** 
 
 ``` 
 - Service 屏蔽后端系统的 Pod（容器组）在销毁、创建过程中所带来的 IP 地址的变化（每个 Pod都有唯一的 IP 地址）, 实现对前端透明统一。
@@ -124,7 +124,7 @@ spec:	        # 这是关于该Deployment的描述，可以理解为你期待该
 
 <img src="https://kuboard.cn/assets/img/module_04_services.11cdc7bc.svg" style="zoom:125%;" />
 
-+ **LabelSelector** 
+##### **LabelSelector** 
 
 ```
 - Service 通过 LabelSelector 将多组 Pod 统一入口，把这些 Pod 的指定端口公布到到集群外部，并支持负载均衡和服务发现。
@@ -134,7 +134,7 @@ spec:	        # 这是关于该Deployment的描述，可以理解为你期待该
 
 <img src="https://kuboard.cn/assets/img/module_04_labels.3255e3d0.svg" width="50%" />
 
-+ **Lable**
+##### **Lable**
 
 ```
 - Labels（标签）是附加到 Kubernetes 对象（Node、Deployment、Pod、Service等） 的键/值对
@@ -196,7 +196,7 @@ kubectl apply -f nginx-service.yaml
 curl [anyNode ip]:32600
 ```
 
-+ **Scaling**
+##### **Scaling**
 
 ``` 
 - 我们创建了一个 Deployment，然后通过 Service 服务 提供访问 Pod 的方式。我们发布的 Deployment 只创建了一个 Pod 来运行我们的应用程序。当流量增加时，我们需要对应用程序进行伸缩操作以满足系统性能需求。
@@ -215,7 +215,7 @@ spec:
   replicas: 4    #使用该Deployment创建两个应用程序实例
 ```
 
-+ **Rolling Update**
+##### **Rolling Update**
 
 ``` 
 - 通过使用新版本的 Pod 逐步替代旧版本的 Pod 来实现 Deployment 的更新, 这个过程中，Service 能够监视 Pod 的状态，将流量始终转发到可用的 Pod 上。
@@ -714,7 +714,7 @@ Service 是 K8S 的服务发现机制，解决 Deployment 管理的 Pod IP 动�
   + **userspace**
 
     ```
-    Master为Service分配虚拟IP地址和端口号，Worker的kube-proxy监听Service创建，并设定iptables规则
+    Master为Service分配虚拟IP地址和端口号，Worker的kube-proxy监听Service创建，并设定iptables防火墙规则
     请求流量发送到Service[ip:targetPort]后，由iptables捕获（内核态操作）并重定向到kube-proxy开启的代理端口，最终流量由kube-proxy负载（用户态操作）到后端Pods
     ```
 
@@ -732,11 +732,13 @@ Service 是 K8S 的服务发现机制，解决 Deployment 管理的 Pod IP 动�
 
 #### Ingress 访问入口
 
+> Ingress 将集群内部的 Service 通过 HTTP/HTTPS 方式暴露到集群外部，并通过规则定义 HTTP/HTTPS 的路由
+
 ```yaml
 # 服务访问转发流程：
-1. Ingress Controller 监听所有 workers节点 80/443端口
-2. Ingress Controller 将外部请求路由到 Service[ip:targetPort]
-3. Service 通过 kube-proxy 进一步将请求负载均衡转发到 Pod
+1. Ingress Controller 开启 workers节点 80/443端口 [域名访问]
+2. Ingress Controller 将外部请求路由到 Service [ip:port访问]
+3. Service 通过 kube-proxy 进一步将请求负载均衡转发到 Pod [label转发]
 
 # Ingress是K8S配置信息，Ingress Controller是K8S访问控制器
 
