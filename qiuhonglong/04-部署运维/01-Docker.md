@@ -110,6 +110,8 @@ EXPOSE 		# 端口配置，-p
 
 CMD 		# 启动容器时执行的命令，会被 docker run 替换
 ENTRYPOINT 	# 启动容器时执行的命令，docker run 不会替换，而是追加命令
+			# shell格式：apt-get install python3
+			# exec格式：["apt-get", "install", "python3", "param..."]
 ```
 
 ```dockerfile

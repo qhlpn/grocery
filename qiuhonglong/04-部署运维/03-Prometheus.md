@@ -28,7 +28,22 @@
 
 ### PromQL
 
-+ **时间序列**
++ **样本数据**
+
+  > Promtheus 将采集到的 **样本数据** 以 **时间序列（time-series）**方式保存在内存数据库中，定期持久化到硬盘。
+  > 每条 time-series 通过 **指标名** 和 **标签值** 命名
+
+  ```
+    ^
+    │     . . . . . . . . . . . . . . . . . . .   node_cpu{cpu="cpu0",mode="idle"}        
+    │     . . . . . . . . . . . . . . . . . . .   node_cpu{cpu="cpu0",mode="system"}      
+    │     . . . . . . . . . . . . . . . . . . .   node_load1{}
+    │     . . . . . . . . . . . . . . . . . . .  
+    v
+      <------------------ 时间 ---------------->
+  ```
+
+  > 在 time-series 中每一个点称为一个 **样本**，由 **指标（名称和标签值）、时间戳、样本值** 组成
 
   ```
   <--------------- metric ---------------------><-timestamp -><-value->
@@ -37,7 +52,8 @@
   http_request_total{status="200", method="POST"}@1434417560938 => 4748
   ```
 
-  > Prometheus 的存储是以时间序列的形式保存在TSDB（时序数据库）中
+
+
 
 + **Metrics 指标**
 
@@ -46,7 +62,7 @@
   <metric name>{<label name>=<label value>, ...}
   ```
 
-  > 标签可以用于对样子数据的过滤、聚合，名称满足 \[a-zA-Z_]\[a-zA-Z0-9\_\]*。指标类型包括：
+  > 标签可以用于对 **样本数据** 的过滤、聚合，名称满足 \[a-zA-Z_]\[a-zA-Z0-9\_\]*。**指标类型** 包括：
 
   + **Counter：** 只增不减的计数器
   + **Gauge：** 可增可减的仪表盘
@@ -55,18 +71,28 @@
 
   > 四个黄金指标：**请求时间、系统流量、错误请求、服务饱和度**
 
+
+
 + **Prome SQL 操作**
 
-  + 条件查询
+  + **条件查询**
   
     ```yaml
     http_requests_total{}  # 当前瞬时数据
+    # 在标签的取值非唯一的情况下，没有匹配的话则返回所有不同标签纬度的时间序列，比如
+    http_requests_total{code="200",handler="alerts",instance="localhost:9090",job="prometheus",method="get"}=(20889@1518096812.326)
+    http_requests_total{code="200",handler="graph",instance="localhost:9090",job="prometheus",method="get"}=(21287@1518096812.326)
+    ```
+  
+    ```yaml
     http_requests_total{instance="",job!=""} # 完全匹配
     http_requests_total{instance=~"a|b|c",job!~""} # 正则匹配
     http_request_total{}[1d] offset 1d # offset 1d limit 1d 
     ```
   
-  + 聚合操作
+  + **聚合操作**
+  
+    > 如果标签的取值非唯一的情况下，通过 PromeQL 查询数据，会返回多条满足标签纬度的时间序列。可以进行聚合
   
     ```yaml
     # <聚合函数>([参数], <Metrics>) [without|by (<label>)]
@@ -78,7 +104,16 @@
     by 分组，计算结果中保留的标签
     ```
   
-  + 操作运算符
+    ```yaml
+    # 查询系统所有http请求的总量
+    sum(http_request_total)
+    # 按照mode计算主机CPU的平均使用时间
+    avg(node_cpu) by (mode)
+    # 按照主机查询各个主机的CPU使用率
+    sum(sum(irate(node_cpu{mode!='idle'}[5m]))  / sum(irate(node_cpu[5m]))) by (instance)
+    ```
+  
+  + **操作运算符**
   
     ```yaml
     # 数学运算
@@ -88,7 +123,7 @@
     http_requests_total > bool 1000 # sample + 0/1
     ```
   
-  + 内置函数
+  + **内置函数**
   
     ```yaml
     # Counter 
@@ -101,7 +136,52 @@
     histogram_quantile(0.7, http_request_duration_seconds_bucket) # 统计分位数 φ=0.7
     ```
   
-    
+
+
+
+### API 接口
+
+```
+https://www.cnblogs.com/zhoujinyi/p/11955131.html
+```
+
++ **clnt v1**
+
+  + **query / query_range 查询指标值**
+
+    ```shell
+    $ curl 'http://localhost:9090/api/v1/query?query=label_replace(kube_node_labels{workspace="10002341",app="js-yangzhou-3-kube",label_kube_ovn_role='master'}, 'ip', '$1', 'node','(.*)')&time=1609316507
+    ```
+
+  + **v1: labels  查询标签名**
+
+    ``` shell
+    $ curl 'localhost:9090/api/v1/labels'
+    ```
+
+  + **v1: label/<label_name>/values 查询标签值**
+
+    ``` shell
+    $ curl 'http://localhost:9090/api/v1/label/job/values'
+    ```
+
+  + **v1: series 匹配器查询指标**
+
+    ```shell
+    $ curl 'http://localhost:9090/api/v1/series?match[]=up&match[]=process_start_time_seconds{job="prometheus"}'
+    ```
+
++ **browser** 
+
+  + **metrics / targets / rules / config**
+
+  + **federate 匹配器查询指标**
+
+    ```sh
+    $ curl 'http://localhost:9090/federate?match[]=up&match[]=process_start_time_seconds{job="prometheus"}'
+    ```
+
+
 
 ### Prome Server
 
@@ -140,9 +220,65 @@ scrape_configs:
 
 ### Exporter
 
-> 提供 HTTP 接口，响应 Prometheus Server 请求，返回监控样本数据，其实例又称 Target
+> 提供 HTTP 接口，Prometheus Server **定期** 发起请求，获取监控样本数据，其实例又称 Target
 
+<img src="https://www.prometheus.wang/exporter/static/prometheus-exporter.png" style="zoom:80%;" />
 
++ **接口数据规范**
+
+  > Exporter 返回的样本数据规范：说明 HELP + 类型 TYPE + 样本 SAMPLE
+  > Prometheus 对其逐行解析
+
+  ```yaml
+  # HELP <metrics_name> <doc_string>
+  # TYPE <metrics_name> <metrics_type>
+  <metric name>{<label name>=<label value>, ...} value [timestamp 缺省时默认当前时间]
+  ```
+
+  ```yaml
+  # HELP node_cpu Seconds the cpus spent in each mode.
+  # TYPE node_cpu counter
+  node_cpu{cpu="cpu0",mode="idle"} 362812.7890625 
+  ```
+
++ **Instances / Jobs**
+
+  > prometheus.yaml 配置文件可通过 **scrape_configs** 配置采集的 exporter 
+
+  > 不同的监控指标（主机/MySQL/Nginx）由不同的 **exporter** **进程** 采集，并在 promtheus 配置 exporter 访问地址
+
+  > 每一个 exporter 称之为一个 **instance（实例）**
+  >
+  > 一组用于相同采集目的的实例，或同一个采集进程的多个副本，则称之为一个 **job（任务）**
+>
+  > 或者说： 任意一个独立的数据源（target）称之为实例（instance）。包含相同类型实例的集合称之作业（job）
+
+  **job**：node
+
++ **instance** 1：1.2.3.4:9100
+  + **instance** 2：5.6.7.8:9100
+  
+  ```yaml
+  scrape_configs:
+    - job_name: linux
+      static_configs:
+        - targets: ['10.190.180.240:9090','10.190.180.240:9091'] 
+        			 # 两个exporter进程均采集本机10.190.180.240.linux指标
+          labels:
+            instance: '10.190.180.240.linux'
+        - targets: ['10.190.180.241:9090','10.190.180.241:9091']  
+                   # 两个exporter进程均采集本机10.190.180.241.linux指标
+          labels:
+          instance: '10.190.180.241.linux'
+  ```
+  
+  ```yaml
+up{job="<job-name>", instance="<instance-id>"}: 如果实例运行状况良好（即可达）为1，或者如果抓取失败则为0
+  ```
+
+  > 如果在抓取的数据中已经存在这些标签中的任何一个，则行为取决于honor_labels配置选项
+  
+  
 
 ### Alertmanager
 
@@ -204,7 +340,7 @@ scrape_configs:
 
 
 
-### 数据存储
+### 高可靠（持久化）
 
 + **本地存储**
 
@@ -222,7 +358,75 @@ scrape_configs:
 
   ![](https://www.prometheus.wang/ha/static/remote-storage-paths.png)
 
+### 高性能（联邦）
 
++ **联邦集群**
+
+  > 联邦集群架构如下：在 **每个** 数据中心搭建各自的 Prometheus Server，用于**采集各自**数据中心监控数据；同时，由一个**中心**  Promtheus Server 负责 **聚合** 多个数据中心的监控数据。
+
+  ![](https://www.prometheus.wang/ha/static/prometheus_feradtion.png)
+
+  ![](https://www.prometheus.wang/ha/static/prometheus_feradtion_2.png)
+
+  > 联邦集群核心在于：每个Prometheus Server都包含一个用于获取当前实例中监控样本的 **接口/federate**。
+  >
+  > 对于中心Prometheus Server而言，无论是从其他的Prometheus实例还是Exporter实例中获取数据实际上 **并没有任何差异**。
+
+  + **主节点配置**
+
+  ```yaml
+  https://blog.csdn.net/vonhehe/article/details/102240698
+  scrape_configs:
+    - job_name: 'node_workers'
+      honor_labels: true           # true：当采集到的监控 指标（指标名+标签值）冲突时，忽略冲突的监控数据
+      							 # false：发生冲突时，将冲突的 标签名 替换为 ”exported_“ 的形式
+      metrics_path: '/federate'    # 联邦集群用于获取监控样本参数配置 /federate
+      params:
+        'match[]':                 # 将想要从节点上获取的信息的标签写入主节点，否则无法获取
+          - '{job="zookeeper"}'    # iterate targets --> target/federate?...[all_macth] 写入主节点
+          - '{job="hbase"}'
+          - '{job="hdfs"}'
+          - '{job="hive"}'
+          - '{job="kafka"}'
+          - '{job="linux_server"}'
+          - '{job="spark
+          - '{job="yarn"}'
+          - '{__name__=~"instance.*"}'
+      static_configs:               # 填写从节点地址池
+        - targets:
+          - '192.168.1.1:9090'
+          - '192.168.1.2:9090'
+  ```
+
+  ```
+  # /federate 与 /metrics 返回结果都是指标定义
+      # HELP <metrics_name> <doc_string>
+    # TYPE <metrics_name> <metrics_type>
+      <metric name>{<label name>=<label value>, ...} value [timestamp 缺省时默认当前时间]
+
+  # 调用主节点 /federate 接口，并过滤出想要的指标（是配置文件中的match[]（汇总多个子节点的指标）的子集）
+  "http://192.168.1.3:9090/federate?match[]={job="zookeeper"}&match[]={job="hbase"}&match[]={__name__=~"instance.*"}&match[]=...
+  
+  # 调用子节点 /federate 接口，获取的是该子节点的指标的子集
+  ```
+  
+  + **从节点配置**
+  
+  ```yaml
+  scrape_configs:
+    - job_name: 'prometheus'
+      static_configs:
+      - targets: ['127.0.0.1:9090']
+    - job_name: 'linux_server'
+    file_sd_configs:
+       - files:
+         - configs/linux.json
+    - job_name: 'hdfs'
+    - job_name: 'hbase'
+    - job_name: 'yarn'
+  ```
+  
+  
 
 ### 服务发现
 
@@ -238,7 +442,7 @@ scrape_configs:
   {
       "service": {
           "name": "node_exporter",
-          "tags": [
+          "tags": [	
               "exporter"
           ],
           "port": 9100

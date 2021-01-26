@@ -78,6 +78,10 @@
 - 如果节点（Node）发生故障，则会在群集中的其他可用节点（Node）上运行相同的 Pod（从同样的镜像创建 Container，使用同样的配置，IP 地址不同，Pod 名字不同）。
 ```
 
+> Node             :  物理机
+> Pod                :  虚拟机
+> Container     :  容器
+
 <img src="https://kuboard.cn/assets/img/module_03_nodes.38f0ef71.svg" width=50% />
 
 ##### **Deployment**
@@ -194,6 +198,12 @@ spec:	    # 这是关于该 Service 的定义，描述了 Service 如何选择 P
 kubectl apply -f nginx-service.yaml
 - 访问服务
 curl [anyNode ip]:32600
+```
+
+##### namespaces
+
+```
+命名空间，可对资源进行分组
 ```
 
 ##### **Scaling**
