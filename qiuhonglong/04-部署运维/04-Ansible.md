@@ -146,11 +146,12 @@ Setup：收集主机系统信息
 
 ### Playbook
 ```
-用户通过ansible命令直接调用yml语言写好的playbook,playbook由多条play组成
-每条play都有一个任务(task)相对应的操作,然后调用模块modules，应用在主机清单上,通过ssh远程连接,从而控制远程主机或者网络设备
-ansibel具有幂等性，多次playbook执行后的主机状态应相同。
+用户通过ansible命令直接调用yml语言写好的playbook，playbook由多条play组成
+每条play都有一个任务(task)相对应的操作，然后调用模块modules，应用在主机清单上
+通过ssh远程连接，从而控制远程主机或者网络设备
+ansibel具有幂等性，多次playbook执行后的主机状态应相同
 ```
-+ 运行指令
++ **运行指令**
 
   ```
   ansible-playbook <filename.yml> ... [options]
@@ -166,7 +167,7 @@ ansibel具有幂等性，多次playbook执行后的主机状态应相同。
       -v -vv -vvv      显示过程
   ```
 
-+ 核心元素
++ **核心元素**
 
   ```
   Hosts         	 执行的远程主机列表(应用在哪些主机上)
@@ -177,7 +178,7 @@ ansibel具有幂等性，多次playbook执行后的主机状态应相同。
   Tags     	     指定某条任务执行，用于选择运行playbook中的部分代码。
   ```
 
-  + hosts
+  + **hosts**
 
     ```
     - hosts: websrvs
@@ -185,7 +186,7 @@ ansibel具有幂等性，多次playbook执行后的主机状态应相同。
         gather_facts: no   # 不收集主机信息，提高速度
     ```
 
-  + tasks
+  + **tasks**
 
     ```
     两种格式：
@@ -196,7 +197,7 @@ ansibel具有幂等性，多次playbook执行后的主机状态应相同。
         command: /sbin/setenforce 0   模块名: 模块对应的参数
     ```
     
-  + hanlders
+  + **handlers**
 
     ```
     触发器 handlers 也是一个是 task 列表
@@ -228,7 +229,7 @@ ansibel具有幂等性，多次playbook执行后的主机状态应相同。
           shell: killall -0 nginx > /tmp/nginx.log
     ```
     
-  + tags
+  + **tags**
     
     ```
       + 可以指定某一个任务添加一个标签，添加标签以后，想执行某个动作可以做出挑选来执行
@@ -250,7 +251,7 @@ ansibel具有幂等性，多次playbook执行后的主机状态应相同。
     ansible-playbook –t install,conf httpd.yml   指定执行install,conf 两个标签
     ```
 
-  + variables
+  + **variables**
 
     ```
     变量名：仅能由字母、数字和下划线组成，且只能以字母开头
@@ -260,7 +261,7 @@ ansibel具有幂等性，多次playbook执行后的主机状态应相同。
                     可以返回每个主机的系统信息包括:版本、主机名、cpu、内存
            ansible all -m setup -a 'filter="ansible_nodename"'     查询主机名    
         2 在/etc/ansible/hosts(主机清单)中定义变量
-            普通变量：主机组中主机单独定义，优先级高于公共变量(单个主机 )
+            普通变量：主机组中主机单独定义，优先级高于公共变量(单个主机)
             公共(组)变量：针对主机组中所有主机定义统一变量(一组主机的同一类别)  
         3 通过命令行指定变量，优先级最高
            ansible-playbook –e varname=value  
@@ -312,7 +313,7 @@ ansibel具有幂等性，多次playbook执行后的主机状态应相同。
           file: name=/app/{{ var2 }}.log state=touch
     ```
 
-  + templates
+  + **templates**
 
     ```
     文本文件，嵌套有脚本（使用模板编程语言编写） 借助模板生成真正的文件
@@ -329,7 +330,7 @@ ansibel具有幂等性，多次playbook执行后的主机状态应相同。
     流表达式：For，If，When
     ```
 
-  + when
+  + **when**
 
     ```
     条件测试:如果需要根据变量、facts或此前任务的执行结果来做为某task执行与否的前提时要用到条件测试,
@@ -360,7 +361,7 @@ ansibel具有幂等性，多次playbook执行后的主机状态应相同。
     此外，when语句中还可以使用facts或playbook中定义的变量
     ```
 
-  + with_items
+  + **with_items**
 
     ```
     循环：当有需要重复性执行的任务时，可以使用迭代机制
@@ -381,10 +382,10 @@ ansibel具有幂等性，多次playbook执行后的主机状态应相同。
       user: name=testuser2 state=present groups=wheel
     ```
 
-  + roles
+  + **roles**
 
     ```
-    用于层次性、结构化地组织playbook。
+    用于层次性、结构化地组织playbook
     roles能够根据层次型结构自动装载变量文件、tasks以及handlers等。
     要使用roles只需要在playbook中使用include指令即可。
     简单来讲，roles就是通过分别将变量、文件、任务、模板及处理器放置于单独的目录中，

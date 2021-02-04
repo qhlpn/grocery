@@ -6,7 +6,7 @@
 
 ### 核心组件
 
-![](https://www.prometheus.wang/quickstart/static/prometheus_architecture.png)
+<img src="pictures/image-20210204144810553.png" alt="image-20210204144810553" style="zoom: 70%;" />
 
 + **Prometheus Server**
 
@@ -222,7 +222,7 @@ scrape_configs:
 
 > 提供 HTTP 接口，Prometheus Server **定期** 发起请求，获取监控样本数据，其实例又称 Target
 
-<img src="https://www.prometheus.wang/exporter/static/prometheus-exporter.png" style="zoom:80%;" />
+<img src="pictures/image-20210204145052259.png" alt="image-20210204145052259" style="zoom: 67%;" />
 
 + **接口数据规范**
 
@@ -285,7 +285,7 @@ up{job="<job-name>", instance="<instance-id>"}: 如果实例运行状况良好�
 > Prometheus Server 周期性根据 PromQL 定义的 AlertRule 告警规则进行计算，将满足触发条件的告警信息发送给 Alertmanager 进行后续处理。
 > Alertmanager 除了提供基本的告警功能以外，还提供了分组聚合、抑制重复、静默处理等功能
 
-<img src="https://www.prometheus.wang/alert/static/prometheus-alert-artich.png" style="zoom: 40%;" />
+<img src="pictures/image-20210204145131953.png" alt="image-20210204145131953" style="zoom: 50%;" />
 
 + **AlertRule**
 
@@ -354,9 +354,9 @@ up{job="<job-name>", instance="<instance-id>"}: 如果实例运行状况良好�
 
   > 解决本地存储无法持久化大量历史数据，Prometheus提供两个标准接口**（remote_write/remote_read）**让用户实现 **Adaptor**，将数据保存到第三方存储中
 
-  ![](https://www.prometheus.wang/ha/static/remote_read_path-2.png)
+  <img src="pictures/image-20210204145414776.png" alt="image-20210204145414776" style="zoom:80%;" />
 
-  ![](https://www.prometheus.wang/ha/static/remote-storage-paths.png)
+  <img src="pictures/image-20210204145554344.png" alt="image-20210204145554344" style="zoom: 64%;" />
 
 ### 高性能（联邦）
 
@@ -364,9 +364,9 @@ up{job="<job-name>", instance="<instance-id>"}: 如果实例运行状况良好�
 
   > 联邦集群架构如下：在 **每个** 数据中心搭建各自的 Prometheus Server，用于**采集各自**数据中心监控数据；同时，由一个**中心**  Promtheus Server 负责 **聚合** 多个数据中心的监控数据。
 
-  ![](https://www.prometheus.wang/ha/static/prometheus_feradtion.png)
+  <img src="pictures/image-20210204145236170.png" alt="image-20210204145236170" style="zoom: 50%;" />
 
-  ![](https://www.prometheus.wang/ha/static/prometheus_feradtion_2.png)
+  <img src="pictures/image-20210204145340526.png" alt="image-20210204145340526" style="zoom:50%;" />
 
   > 联邦集群核心在于：每个Prometheus Server都包含一个用于获取当前实例中监控样本的 **接口/federate**。
   >
