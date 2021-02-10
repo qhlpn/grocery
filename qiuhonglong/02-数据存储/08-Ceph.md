@@ -1,6 +1,6 @@
-### Ceph集群搭建
+### 1 Ceph集群搭建
 
-#### 配置环境
+#### 1.1 配置环境
 
 + 配置IP和网络，比如
 
@@ -73,7 +73,9 @@
   df -h
   ```
 
-#### 管理机安装ceph-ansible
+
+
+#### 1.2 管理机安装ceph-ansible
 
 + 安装 Ansible
 
@@ -142,7 +144,7 @@
       # ceph_stable_key: http://mirrors.aliyun.com/ceph/keys/release.asc
       ceph_mirror: # 配置内部yum源
       ceph_stable_release: nautilus
-      ceph_stable_repo: "{{ ceph_mirror }}/rpm-{{ ceph_stable_release }}"    
+      ceph_stable_repo: "{{ ceph_mirror }}/rpm-{{ ceph_stable_release }}"
       # 集群网络配置
       public_network: 10.190.180.0/22
       cluster_network: 10.190.180.0/23    
@@ -158,10 +160,11 @@
           osd_pool_default_pg_num: 64
           osd_pool_default_pgp_num: 64
           osd_pool_default_size: 1
+          #common_single_host_mode: true
         mon:
           mon_allow_pool_create: true
-  
-  # 配置 osd.yml
+  	ntp_daemon_type: ntpd
+  # 配置 osds.yml
   # bluestore：data + metadata + wal
       ---
       lvm_volumes:
@@ -169,19 +172,21 @@
           data_vg: ceph
           wal: osd-wal
           wal_vg: ceph
-          db: osd-vg
+          db: osd-meta
           db_vg: ceph
   
   # 配置 site.yml
   cd ceph-ansible
-  cp site.yml.sample site.yml
-
+cp site.yml.sample site.yml
+  
   # 注释掉不用的 hosts
   # 注释掉 - import_playbook: dashboard.yml
   ```
   
 
-#### 创建集群
+
+
+#### 1.3 创建集群
 
 ```shell
 ansible-playbook site.yml
@@ -189,12 +194,19 @@ ansible-playbook site.yml
 
 
 
-### Ceph命令操作
+### 2 Ceph命令操作
 
 > architecture：https://docs.ceph.com/en/latest/architecture/
 > cluster.operations：https://docs.ceph.com/en/latest/rados/operations/
 
-#### 用户权限
+```shell
+ceph -s 
+ceph health detail
+```
+
+
+
+#### 2.1 用户权限
 
 > https://docs.ceph.com/en/latest/rados/operations/user-management/#
 > https://is-cloud.blog.csdn.net/article/details/89679912 
@@ -210,12 +222,18 @@ ansible-playbook site.yml
   
   # 用户名
   osd.1
-  		# 用户密码
+      	# 用户密码
           key: AQCpmBpgshmRHRAAFln+JqLcJy+IXY6tInrVlw==
           # 允许用户在 mon 进行 osd 访问
           caps: [mon] allow profile osd
           # 允许用户在 osd 进行 rwx
           caps: [osd] allow *
+          
+  # profile osd (Monitor only)
+  # Gives a user permissions to connect as an OSD to other OSDs or monitors. Conferred on OSDs to enable OSDs to handle replication heartbeat traffic and status reporting.
+  
+  # profile bootstrap-osd (Monitor only)
+  # Gives a user permissions to bootstrap an OSD. Conferred on deployment tools such as ceph-volume, cephadm, etc. so that they have permissions to add keys, etc. when bootstrapping an OSD.
   ```
 
 + ceph-authtool
@@ -229,7 +247,9 @@ ansible-playbook site.yml
   ceph -n client.admin --keyring=/etc/ceph/ceph.client.admin.keyring health # 指定密钥环用户来操作
   ```
 
-#### MON
+
+
+#### 2.2 MON
 
 + 新增 mon
 
@@ -248,12 +268,11 @@ ansible-playbook site.yml
   ceph-mon -i node-1 --mkfs --monmap /tmp/monmap --keyring /etc/ceph/ceph.mon.keyring -c /etc/ceph/ceph.conf
   # 5. 配置标志位文件
   touch /var/lib/ceph/mon/ceph-node-2/done
-  touch /var/lib/ceph/mon/ceph-node-2/systemd
   # 6. 启动 mon 服务
   systemctl start ceph-mon@node-2
   systemctl enable ceph-mon.target
   ```
-
+  
 + monmaptool 工具 
 
   ```shell
@@ -269,7 +288,9 @@ ansible-playbook site.yml
   monmaptool --add node-2 10.112.101.143 /tmp/monmap
   ```
 
-#### OSD
+
+
+#### 2.3 OSD
 
 + 新增 osd
 
@@ -290,19 +311,56 @@ ansible-playbook site.yml
   > https://docs.ceph.com/en/nautilus/man/8/ceph-volume/
 
   ```
-  ceph-volume lvm [ trigger | create | activate | prepare | zap | list | batch]
+  ceph-volume lvm [ trigger | create | activate | prepare | zap | list | batch ]
   ceph-volume simple [ trigger | scan | activate ]
   ceph-volume [-h] [–cluster CLUSTER] [–log-level LOG_LEVEL] [–log-path LOG_PATH]
   ceph-volume inventory
   ```
 
-#### MGR
+
+
+#### 2.4 MGR
+
++ 新增 mgr
+
+  ```shell
+  # 1. 创建集群用户，并生成密钥环放在指定目录
+  ceph auth get-or-create mgr.node-1 mon 'allow profile mgr' osd 'allow *' mds 'allow *' -o /var/lib/ceph/mgr/ceph-node-1/keyring
+  # 2. 启动 mgr 服务
+  systemctl start ceph-mgr@node-1
+  ```
+
++ 开启 dashboard 模块
+
+  ``` shell
+  # 1. 安装包
+  yum install ceph-mgr-dashboard
+  # 2. 启动模块
+  ceph mgr module enable dashboard
+  # 3. 配置
+  ceph config set mgr mgr/dashboard/ssl true  # 默认 true
+  ceph dashboard create-self-signed-cert
+  ceph config set mgr mgr/dashboard/server_addr 0.0.0.0
+  ceph config set mgr mgr/dashboard/server_port 8080  # 默认 
+  ceph config set mgr mgr/dashboard/ssl_server_port 8843 # 默认
+  ceph dashboard ac-user-create root 123456 administrator
+  
+  ceph mgr module ls # "dashboard": "https://node-1:8443/"
+  ```
+
++ 开启 prometheus 模块
+
+  ``` shell
+  ceph mgr module enable prometheus
+  ceph config set mgr mgr/prometheus/server_addr 0.0.0.0  # 默认
+  ceph config set mgr mgr/prometheus/server_port 9283  # 默认
+  
+  ceph mgr module ls # "prometheus": "http://node-1:9283/"
+  ```
 
 
 
-
-
-#### RBD块存储
+#### 2.5 RBD块存储
 
 > 命令文档：https://docs.ceph.com/en/latest/man/8/rbd/
 
@@ -366,7 +424,7 @@ ansible-playbook site.yml
     rbd snap rm {pool-name}/{image-name}@{snap-name}  
     ```
 
-  + 克隆 Layering/Copy-On-Write
+  + 克隆 Layering / Copy-On-Write
 
     ```shell
     rbd snap create {pool-name}/{image-name}@{snap-name}      # 创建快照
@@ -393,9 +451,11 @@ ansible-playbook site.yml
 
 
 
-### Ceph基础知识
+### 3 Ceph基础知识
 
-#### 存储方案
+
+
+#### 3.1 存储方案
 
 + **DAS(Direct-attached Storage)：**直连存储裸设备，物理接口插拔，本地操作
 + **NAS(Network Attached Storage)：** **网络**附加存储，**共享**文件系统，如NFS服务器
@@ -410,7 +470,7 @@ ansible-playbook site.yml
 
 
 
-#### Ceph架构
+#### 3.2 Ceph架构
 
 > Ceph可以将多台服务器组成集群，把这些机器中的磁盘资源整合到一块，形成资源池（支持PB级别 K M G T P），按需分配给客户端使用，即 软件定义存储
 
@@ -429,7 +489,7 @@ ansible-playbook site.yml
 
 
 
-#### Ceph组件
+#### 3.3 Ceph组件
 
 + **osd(object storage daemon)：**ceph通过osd管理物理硬盘，每一块盘对应一个osd进程，**负责处理集群数据存储、复制、恢复、均衡等**
 + **mon(monitor)：**维护cluster map（五张表）信息，包括其它组件元信息、crush算法信息，**保证集群数据一致性**  **Paxos 算法**
@@ -438,7 +498,7 @@ ansible-playbook site.yml
 
 
 
-#### RADOS存储
+#### 3.4 RADOS存储
 
 >  一个文件首先按照配置的大小切分成多个对象，对象经过哈希算法映射到不同的归置组PG中，每个PG再通过C-RUSH算法将对象存储到经状态过滤的多个OSD中（第一个OSD是主节点，其它的是副本从节点）。
 
@@ -448,17 +508,17 @@ ansible-playbook site.yml
 
 + **File：**用户需要存储或访问的文件
 + **Objects：**RADOS基本存储单元，即对象，由File进行切分（ID / Binary Data / Metadata）
-+ **PG(Placement Group)：**用于放置多个Objects，映射到多个OSD上（一主多从）。是实现上的逻辑概念，物理上不存在。PG数量固定，不会随着OSD动态伸缩。
++ **PG(Placement Group)：**一个PG包含Objects，一个PG映射到多个OSD上（一主多从）。是实现上的逻辑概念，物理上不存在。PG数量固定，不会随着OSD动态伸缩。
 + **PGP：**相当于PG存放的OSD副本排列组合。假设PG映射到3个osd，即osd1，osd2，osd3，副本数为2，如果pgp=1，那么pg存放的副本osd的组合就有一种，比如（osd1, osd2）
 + **Pool**：对多个PG设置相同的Namespace，定义成逻辑概念上的Pool，可以对不同的业务场景做隔离（pool size 即 PG 映射到 size 个 osd）
-+ **OSDs：**每一块物理硬盘对应一个osd进程
++ **OSDs：**每一块物理硬盘对应一个osd进程。每个OSD上分布多个PG，每个PG会自动散落在不同OSD上。如果扩容OSD，那么相应的PG会进行迁移到新的OSD上，保证每个OSD上的PG数量均衡
 + **Bucket：**C-RUSH算法树的中间节点（区别于rgw对象存储中的bucket）
 
 > 上面的映射可归纳为：file → (Pool, Object) → (Pool, PG) → OSD set → OSD/Disk
 
 
 
-#### CRUSH算法
+#### 3.5 CRUSH算法
 
 > Object在通过PG存储到实际的OSD设备上时，会通过C-RUSH算法，按照预定好的规则选择N个OSD进行存储，即CRUSH(pgid) --> (osd1,osd2 ...)。不同对象存储到OSD设备位置无必然联系，对相同对象进行重复计算，其存储位置必然相同。	
 
@@ -469,3 +529,9 @@ ansible-playbook site.yml
 > 若以host为单位，如host0，则落到dev0 dev1
 >
 > 若以rack为单位，如rack0，则落到dev0 ... 8个
+
+
+
+#### 3.6 PG 状态
+
++ 
