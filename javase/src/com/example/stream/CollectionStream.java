@@ -1,8 +1,6 @@
 package com.example.stream;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -14,9 +12,47 @@ import java.util.stream.Stream;
 public class CollectionStream {
 
 
+    public static void main(String[] args) {
+
+//        transfer();
+//        foreach();
+//        filter();
+//        map();
+//        flatMap();
+//        sorted();
+//        distinct();
+//        count();
+//        skip_limit();
+//        min_max();
+//        anyMatch_allMatch();
+//        findAny_findFirst();
+
+    }
+
     private static void transfer() {
 
+        List<String> var1 = Arrays.asList("1", "2", "3");
 
+        // list -> stream
+        // serial
+        var1.stream();
+
+        // parallel
+        var1.parallelStream();
+
+        // stream -> Collection
+        var1.stream().collect(Collectors.toList());
+        Stream.of("1", "2", "3").collect(Collectors.toList());
+
+        // stream -> array
+        var1.stream().toArray();
+
+
+        List<String> var2 = Arrays.asList("4", "5", "6");
+
+        Stream.of(var1, var2);
+
+        Stream.concat(var1.stream(), var2.stream());
 
     }
 
@@ -33,8 +69,8 @@ public class CollectionStream {
         // 等效 list.stream().forEach
         list.forEach(System.out::println);
 
-        // 并行
         list.parallelStream().forEach(System.out::println);
+
     }
 
 
@@ -55,7 +91,7 @@ public class CollectionStream {
 
         list.stream().map(item -> item = "3").forEach(System.out::println);
 
-//        list.stream().forEach(item -> item = "3") -> is null
+        // list.stream().forEach(item -> item = "3") -> is null
 
     }
 
@@ -73,16 +109,82 @@ public class CollectionStream {
         List<String> d = Stream.of(a, b).flatMap(item -> item.stream()).collect(Collectors.toList());
         // [1, 2, 3, 4, 5]
 
+    }
+
+    private static void sorted() {
+
+        List<Integer> list = Arrays.asList(1, 2, 3, 4);
+
+        // (l, r) -> l - r
+        // 升序，正数交换，非正不动
+        list.stream().sorted(Comparator.comparingInt(l -> l)).forEach(System.out::println);
+
+    }
+
+    private static void distinct() {
+
+        List<Integer> list = Arrays.asList(1, 1, 1, 1);
+
+        list.stream().distinct().forEach(System.out::println);
+
+    }
+
+    private static void count() {
+
+        List<Integer> list = Arrays.asList(1, 2, 3, 4);
+
+        System.out.println(list.stream().count());
 
     }
 
 
-    public static void main(String[] args) {
+    private static void skip_limit() {
 
-//        foreach();
-//        filter();
-        map();
+        List<Integer> list = Arrays.asList(1, 2, 3, 4);
+
+        list.stream().skip(1).limit(1).forEach(System.out::println);
+        // 2
+
     }
+
+    private static void min_max() {
+
+        List<Integer> list = Arrays.asList(1, 2, 3, 4);
+
+        // max : 排序后的最末位
+        Optional<Integer> var1 = list.stream().max(Comparator.comparingInt(l -> l));
+        Optional<Integer> var2 = list.stream().max((l, r) -> r - l);
+
+        System.out.println(var1.get());
+        System.out.println(var2.get());
+
+    }
+
+    private static void anyMatch_allMatch() {
+
+        List<String> list = Arrays.asList("10", "11", "12", "13");
+
+        System.out.println(list.stream().anyMatch(item -> "10".equals(item)));
+        // true
+
+        System.out.println(list.stream().allMatch(item -> item.contains("1")));
+        // true
+
+    }
+
+    private static void findAny_findFirst() {
+
+        List<String> list = Arrays.asList("10", "11", "12", "13");
+
+        Optional var1 = list.stream().findFirst();
+        Optional var2 = list.stream().findAny();
+
+        System.out.println(var1.get());
+        System.out.println(var2.get());
+
+    }
+
+
 
 
 }
