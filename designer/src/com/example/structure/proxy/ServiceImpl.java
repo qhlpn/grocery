@@ -1,6 +1,6 @@
 package com.example.structure.proxy;
 
-public class ServiceImp implements Service {
+public class ServiceImpl implements Service {
 
     @Override
     public int run() {
