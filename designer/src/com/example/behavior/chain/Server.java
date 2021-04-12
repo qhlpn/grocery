@@ -7,7 +7,7 @@ public class Server {
     public void doService(String msg) {
         try {
             head.service(msg);
-        } catch (Exception e) {
+        } catch (NullPointerException e) {
             System.out.println("find no service support.");
         }
     }
