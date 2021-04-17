@@ -1,13 +1,16 @@
-package com.example.io;
+package org.example.bio;
 
 import java.io.*;
 
-public class IOoperate {
+/**
+ * @author QiuHongLong
+ */
+public class Operate {
 
     // 输入到内存
     // 输出到外部
 
-    // two abstract class
+    // abstract class
     // 字节流：InputStream / OutputStream
     // 字符流：Reader / Writer
 
@@ -16,7 +19,7 @@ public class IOoperate {
 
     public static void main(String[] args) throws IOException {
 
-//        file();
+        file();
 //        inputOutputStream();
 //        objectSerialStream();
 //        readerWriter();

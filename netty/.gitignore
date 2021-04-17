@@ -1,7 +1,3 @@
-HELP.md
-target/
-.mvn
+# Created by .ignore support plugin (hsz.mobi)
 .idea
-mvnw.cmd
-mvnw
 netty.iml
