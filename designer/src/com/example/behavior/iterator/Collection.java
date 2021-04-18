@@ -24,7 +24,7 @@ public class Collection<E> implements Aggregate {
         return new Iter<>(this);
     }
 
-    public static class Iter<E> implements Iterator<E> {
+    private static class Iter<E> implements Iterator<E> {
 
         private Collection<E> pojos;
         private int index;
