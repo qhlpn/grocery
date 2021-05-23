@@ -5,16 +5,17 @@ import lombok.extern.slf4j.Slf4j;
 import java.io.*;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author QiuHongLong
@@ -39,11 +40,14 @@ public class Operate {
 //        demo2();
 //        demo3();
 //        pool.submit(() -> demo4());
+//        pool.submit(() -> demo5());
 
+        new BossEventLoop().register();
+        while (true) {
+            pool.submit(() -> demosocketclient());
+            Thread.sleep(50);
+        }
 
-        pool.submit(() -> demo5());
-
-        pool.submit(() -> demosocketclient());
 
     }
 
@@ -191,11 +195,6 @@ public class Operate {
     }
 
 
-    private static void demo6() {
-
-    }
-
-
     /**
      * socket 客户端
      */
@@ -203,20 +202,142 @@ public class Operate {
         try {
             SocketChannel sc = SocketChannel.open();
             ByteBuffer source = ByteBuffer.allocate(32);
-            sc.connect(new InetSocketAddress("localhost", 8080));
-            source.put("flip before read".getBytes());
+            sc.connect(new InetSocketAddress("localhost", 8888));
+            source.put("flip before read\n".getBytes());
             source.flip();
             sc.write(source);
             source.clear();
-            source.put("hello world".getBytes());
+            source.put("hello world\n".getBytes());
             source.flip();
             sc.write(source);
-            sc.write(Charset.defaultCharset().encode("hello world"));
-            sc.write(Charset.defaultCharset().encode("so slow"));
+            sc.write(Charset.defaultCharset().encode("hello world\n"));
+            sc.write(Charset.defaultCharset().encode("so slow\n"));
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
+
+    static class BossEventLoop implements Runnable {
+
+        private Selector selector;
+        private WorkerEventLoop[] workers;
+        private volatile boolean start = false;
+        private AtomicInteger index = new AtomicInteger();
+
+        public void register() throws IOException {
+            if (!start) {
+                ServerSocketChannel ssc = ServerSocketChannel.open();
+                ssc.bind(new InetSocketAddress(8888));
+                ssc.configureBlocking(false);
+                selector = Selector.open();
+                log.info("boss selector is {}", selector.toString());
+                SelectionKey sscKey = ssc.register(selector, SelectionKey.OP_ACCEPT, null);
+                this.workers = initWorkers();
+                new Thread(this, "boss").start();
+                log.info("boss start ....");
+                start = true;
+            }
+        }
+
+        private WorkerEventLoop[] initWorkers() {
+            WorkerEventLoop[] eventLoops = new WorkerEventLoop[Runtime.getRuntime().availableProcessors()];
+            log.debug("available processors cnt: {}", Runtime.getRuntime().availableProcessors());
+            for (int i = 0; i < eventLoops.length; i++) {
+                eventLoops[i] = new WorkerEventLoop(i);
+            }
+            return eventLoops;
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    int cnt = selector.select();
+                    log.info("boss selectedkey cnt : {}", cnt);
+                    Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
+                    while (iter.hasNext()) {
+                        SelectionKey key = iter.next();
+                        iter.remove();
+                        if (key.isAcceptable()) {
+                            ServerSocketChannel ssc = (ServerSocketChannel) key.channel();
+                            SocketChannel sc = ssc.accept();
+                            sc.configureBlocking(false);
+                            log.debug("{} connected", sc.getRemoteAddress());
+                            workers[index.getAndIncrement() % workers.length].register(sc);
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+        }
+    }
+
+    static class WorkerEventLoop implements Runnable {
+
+        private Selector selector;
+        private volatile boolean start = false;
+        private int index;
+
+        public WorkerEventLoop(int index) {
+            this.index = index;
+        }
+
+        public void register(SocketChannel sc) throws IOException {
+            if (!start) {
+                selector = Selector.open();
+                log.info("worker-{} selector is {}", index, selector.toString());
+                new Thread(this, "worker-" + index).start();
+                log.info("worker-{} start ....", index);
+                start = true;
+            }
+            try {
+                selector.wakeup();
+                sc.register(selector, SelectionKey.OP_READ, null);
+                int cnt = selector.selectNow();
+                log.info("worker-{} selectNow selectedkey cnt : {}", index, cnt);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+
+        @Override
+        public void run() {
+            while (true) {
+                try {
+                    int cnt = selector.select();
+                    log.info("worker-{} select selectedkey cnt : {}", index, cnt);
+                    Iterator<SelectionKey> iter = selector.selectedKeys().iterator();
+                    while (iter.hasNext()) {
+                        SelectionKey key = iter.next();
+                        iter.remove();
+                        if (key.isReadable()) {
+                            SocketChannel sc = (SocketChannel) key.channel();
+                            ByteBuffer buffer = ByteBuffer.allocate(1024);
+                            int read = sc.read(buffer);
+                            try {
+                                if (read == -1) {
+                                    key.cancel();
+                                    sc.close();
+                                } else {
+                                    log.info("{} message: ", sc.getRemoteAddress());
+                                    System.out.println(byteBufferToString(buffer));
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                                key.cancel();
+                                sc.close();
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
+    }
 
 }
