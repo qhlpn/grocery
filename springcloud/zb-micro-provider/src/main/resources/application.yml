@@ -1,0 +1,34 @@
+server:
+  port: 9100
+
+spring:
+  application:
+    name: micro-provider
+
+
+# 服务发现
+
+#eureka:
+#  client:
+#    # 表示是否将自己注册进 Eureka server 默认为true。
+#    register-with-eureka: true
+#    # 是否从EurekaServer抓取已有的注册信息，默认为true。单节点无所谓，集群必须设置为true才能配合ribbon使用负载均衡
+#    fetchRegistry: true
+#    service-url:
+#      defaultZone: http://localhost-alias-01:10100/eureka,http://localhost-alias-02:10200/eureka
+#  instance:
+#    instance-id: zb-micro-provider
+#    prefer-ip-address: true
+
+#  cloud:
+#    zookeeper:
+#      connect-string: 10.190.90.240:2181
+
+
+  cloud:
+    consul:
+      host: 10.190.90.240
+      port: 8500
+      discovery:
+        service-name: ${spring.application.name}
+        hostname: 10.190.90.98
