@@ -1,6 +1,10 @@
 package com.example.consumer.controller;
 
 
+import com.example.consumer.service.FeignService;
+import com.netflix.hystrix.contrib.javanica.annotation.DefaultProperties;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixProperty;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -11,6 +15,7 @@ import javax.annotation.Resource;
 
 @Slf4j
 @RestController
+@DefaultProperties(defaultFallback = "defaultFallback")  // hystrix缺省兜底fallback
 public class AppController {
 
     // private static final String URL = "http://localhost:9000";
@@ -25,10 +30,16 @@ public class AppController {
     @Resource
     private DiscoveryClient discoveryClient;
 
+    @Resource
+    private FeignService appService;
+
 
     @GetMapping("/consumer")
+//    @HystrixCommand(fallbackMethod = "fallback", commandProperties = {@HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds", value = "2000")})
+    @HystrixCommand(commandProperties = {@HystrixProperty(name = "execution.isolation.thread.timeoutInMilliseconds", value = "2000")})
     public String get() {
-        return restTemplate.getForObject(URL + "/provider", String.class, (Object) null);
+//        return restTemplate.getForObject(URL + "/provider", String.class, (Object) null);
+        return appService.get();
     }
 
 
@@ -36,6 +47,14 @@ public class AppController {
         for (String service : discoveryClient.getServices()) {
             log.info(service);
         }
+    }
+
+    public String fallback() {
+        return "timeout or except , consumer fallback";
+    }
+
+    public String defaultFallback() {
+        return "timeout or except , consumer default fallback";
     }
 
 

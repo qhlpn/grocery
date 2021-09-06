@@ -30,3 +30,14 @@ spring:
       discovery:
         service-name: ${spring.application.name}
         hostname: 10.190.90.98
+
+
+# 设置feign客户端超时时间(OpenFeign默认支持ribbon)
+ribbon:
+  ReadTimeout: 5000
+  ConnectTimeout: 5000
+
+# feign日志以什么级别监控哪个接口
+logging:
+  level:
+    com.example.consumer.service.FeignService: debug
