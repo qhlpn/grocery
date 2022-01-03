@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	p "golang/pkg" // module/package
 	"strings"
 	"unsafe"
 )
@@ -30,7 +32,256 @@ func main() {
 	// function()
 
 	// 异常
-	exception()
+	// exception()
+
+	// 指针
+	// pointer()
+
+	// 结构体
+	// structure()
+
+	// 包
+	// pkg()
+
+	// 接口
+	// interf()
+
+	// 反射
+
+}
+
+func interf() {
+
+	// 在Go语言中接口（interface）是一种类型，一种抽象的类型
+
+	// type 接口类型名 interface{
+	// 	方法名1( 参数列表1 ) 返回值列表1
+	//	方法名2( 参数列表2 ) 返回值列表2
+	// }
+
+	// Go语言的接口在命名时，一般会在单词后面添加er，突出该接口的类型含义
+
+	// Go语言的 interface 是非侵入式的，不像 Java 的 interface 实现需要显示的声明
+	// 一个对象只要全部实现了接口中的方法，那么就实现了这个接口
+
+	// 接口类型变量
+	// 接口类型变量能够存储所有 实现了该接口 的实例
+
+	a := s{f1: 1}
+	var _ ier = a // check，确保实例实现了接口
+	a.i1()
+
+	var b ier
+	b = a // 结构体类型 和 结构体指针类型 都可以赋值接口类型变量
+	b = &a
+	b.i1()
+
+	// 一个接口的方法，不一定需要由一个类型完全实现，接口的方法可以通过在类型中嵌入其他类型或者结构体来实现
+
+	// 接口与接口间可以通过嵌套创造出新的接口
+
+	// 空接口
+	// 空接口是指没有定义任何方法的接口，空接口类型的变量可以存储任意类型的变量
+	// 作用： 1. 作为函数的参数 2. 作为map的值
+
+	// 类型断言
+	// x.(T)  -> 接口类型.(具体类型)
+	c, e := b.(*s)
+	fmt.Println(c, e) // &{1} true
+
+}
+
+type ier interface {
+	i1()
+}
+
+type s struct {
+	f1 int
+}
+
+func (s s) i1() {
+	fmt.Println(s.f1)
+}
+
+func pkg() {
+	a := p.A
+	b := p.B
+	p.O()
+	c := p.C{
+		F: 1,
+	}
+
+	fmt.Println(a, b, c)
+}
+
+// 结构体
+func structure() {
+
+	// 类型定义
+	type myInt int
+
+	// 结构体
+	// 声明类型
+	type s struct {
+		// 字段大写开头表示可公开访问，小写表示私有（仅在定义当前结构体的包中可访问）
+		f1 int
+		f2 int
+	}
+
+	// 实例化、初始化
+	var a s = s{}
+	a.f1 = 1
+	a.f2 = 1
+	fmt.Println(a)
+
+	c := s{
+		f1: 1,
+		f2: 1,
+	}
+	fmt.Println(c)
+
+	d := &s{
+		f1: 1,
+		f2: 1,
+	}
+	fmt.Println(d, *d)
+
+	b := new(s)
+	b.f1 = 1
+	b.f2 = 1
+	fmt.Println(b, *b)
+
+	e := &s{
+		1,
+		1,
+	}
+	fmt.Println(e, *e)
+
+	// 构造函数
+	f := newSt(6)
+	fmt.Println(f)
+
+	// Go语言中的方法（Method）是一种作用于【特定类型变量】的函数
+	// func (接收者变量 接收者类型) 方法名(参数列表) (返回参数) {}
+
+	// 值类型接收者（副本）
+	f.m1(7)
+	fmt.Println(f)
+
+	// 指针类型接收者（本体）
+	f.m2(8)
+	fmt.Println(f)
+
+	// 可为自定义的任意类型添加方法
+	// type myInt int
+	// func (m myInt) m() {}
+
+	// 继续效果
+	// 通过 结构体嵌套 实现【继承】效果：指可以让某个类型的对象获得另一个类型的对象的属性的方法
+	ch := &child{
+		&parent{
+			id: 1,
+		},
+	}
+	ch.getPId()
+	ch.getCId()
+
+	// 序列化与反序列化
+	type u struct {
+		F1 int // json序列化是默认使用字段名作为key
+		F2 int `json:"f_2"` // 通过指定tag实现json序列化该字段时的key
+		f3 int // 私有不能被json包访问
+	}
+
+	v := &u{
+		F1: 1,
+		F2: 2,
+		f3: 3,
+	}
+
+	data, _ := json.Marshal(v)
+	fmt.Println(string(data))
+
+	w := &u{}
+	json.Unmarshal(data, w)
+	fmt.Println(w)
+
+}
+
+type parent struct {
+	id int
+}
+
+func (p parent) getPId() {
+	fmt.Println(p.id)
+}
+
+type child struct {
+	// p *parent
+	*parent // 用嵌套匿名结构体，才可以省略 c.p.id 的 p
+}
+
+func (c child) getCId() {
+	// fmt.Println(c.p.id)
+	fmt.Println(c.id)
+}
+
+type st struct {
+	f1 int
+}
+
+func newSt(f1 int) *st {
+	return &st{
+		f1: f1,
+	}
+}
+
+func (st st) m1(f1 int) {
+	st.f1 = f1
+}
+
+func (st *st) m2(f1 int) {
+	st.f1 = f1 // s.f1 -> 成员变量指针
+}
+
+func pointer() {
+
+	// 区别于C/C++中的指针，Go语言中的指针不能进行偏移和运算，是安全指针
+
+	// 3个概念：指针类型、指针地址和指针取值
+	// 指针变量
+	//		【值类型】（int、float、bool、string、array、struct）都有对应的【指针类型】，如：*int、*int64、*string等
+	// 指针取址 -> 返回指针变量
+	//		对变量进行取地址（&）操作，可以获得这个变量的【指针变量】，指针变量的值是指针地址
+	a := 10
+	b := &a
+	var c *int = &a
+	// 指针取值
+	//		对指针变量进行取值（*）操作，可以获得指针变量指向的原变量的值
+	d := *b
+	*b = 11
+	fmt.Println(a, b, c, d) // 11 0xc00000a098 0xc00000a098 10
+
+	// 【值类型】变量，声明不需要分配内存空间，是因为它们在声明的时候已经默认分配好了内存空间
+
+	// 【引用类型】变量（eg 指针变量、slice、map、channel），使用的时候不仅要声明它，还要为它分配内存空间，否则我们的值就没办法存储
+	// var x *int
+	// *x = 10
+	// var y map[int]int
+	// y[100] = 100
+
+	// 内存分配：
+
+	// new
+	// func new(Type) *Type  -> 返回指针变量
+	var e *int = new(int)
+	*e = 10
+
+	// make
+	// 区别于new，它只用于slice、map以及channel的内存创建
+	// func make(t Type, size ...IntegerType) Type -> 返回 Type，因为 Type 本身就是引用类型
+	var f map[int]int = make(map[int]int, 10)
+	f[1] = 1
 
 }
 
@@ -39,18 +290,37 @@ func exception() {
 	// defer
 	// 当 defer 所在函数即将返回时，将延迟处理的语句按 defer 定义的逆序进行执行，即：先被defer的语句最后被执行，最后被defer的语句，最先被执行。
 	// 函数 return 在底层不是原子操作，它分为 给返回值赋值 和 RETURN指令 两步。defer 语句执行的时机就在 返回值赋值操作 后，RET指令 执行前。
-	// defer 注册要延迟执行的函数时该函数所有的参数都需要确定其值
 	e1()
 
 	// panic / recover
 	// Go语言中目前（Go1.12）是没有异常机制，是使用panic/recover模式来处理错误。
 	// panic可以在任何地方引发，但recover只有在defer调用的函数中有效。
 
+	// e3()	// panic
+	e4() // panic with recover
+
+}
+
+func e4() {
+	defer func() {
+		err := recover()
+		if err != nil {
+			fmt.Println(err)
+			fmt.Println("recover e4")
+		}
+	}()
+	panic("failed e4")
+}
+
+func e3() {
+	panic("failed e3")
 }
 
 func e1() {
 	x := 1
 	y := 2
+	// defer 注册要延迟执行的函数时该函数所有的参数都需要确定其值
+	// defer 注册的是外层函数
 	defer e2("AA", x, e2("A", x, y))
 	x = 10
 	defer e2("BB", x, e2("B", x, y))
