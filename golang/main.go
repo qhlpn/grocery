@@ -4,7 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	p "golang/pkg" // module/package
+	"reflect"
+	"runtime"
 	"strings"
+	"sync"
+	"time"
 	"unsafe"
 )
 
@@ -29,7 +33,7 @@ func main() {
 	// hashmap()
 
 	// 函数
-	// function()
+	//function()
 
 	// 异常
 	// exception()
@@ -47,7 +51,217 @@ func main() {
 	// interf()
 
 	// 反射
+	// reflection()
 
+	// 多线程
+	routine()
+
+}
+
+func routine() {
+
+	// Go语言中使用 goroutine 非常简单，只需要在调用函数的时候在前面加上 go 关键字
+
+	// WaitGroup
+	// 单个线程 等待 其它count个线程 执行完任务后，再唤醒执行
+	var waitGroup = new(sync.WaitGroup) // 指针变量使用的时候不仅要声明，还要 new 分配内存空间，否则 nil 异常
+	for i := 0; i < 10; i++ {
+		go func(i int, waitGroup *sync.WaitGroup) {
+			fmt.Printf("begin %d\n", i)
+			waitGroup.Done()
+		}(i, waitGroup)
+		waitGroup.Add(1)
+	}
+	waitGroup.Wait()
+
+	// 并行
+	// 并发
+
+	// GMP  https://tonybai.com/2017/06/23/an-intro-about-goroutine-scheduler/
+	// M： CPU逻辑核心数（物理处理器）
+	// P： 逻辑处理器，设置 runtime.GOMAXPROCS
+	// G： 任务
+
+	r1 := func() {
+		for i := 0; i < 100000; i++ {
+			fmt.Printf("r1: %d\n", i)
+		}
+	}
+	r2 := func() {
+		for i := 100000; i < 200000; i++ {
+			fmt.Printf("\tr2: %d\n", i)
+		}
+	}
+
+	n := runtime.GOMAXPROCS(1) // 逻辑核心数设 1 , 并发执行
+	fmt.Printf("old num is : %d\n", n)
+	go r1()
+	go r2()
+	time.Sleep(time.Second)
+
+	n = runtime.GOMAXPROCS(runtime.NumCPU()) // 逻辑核心数设 8 , 并行执行
+	fmt.Printf("old num is : %d\n", n)
+	go r1()
+	go r2()
+	time.Sleep(time.Second)
+
+	// 管道 （消息队列）
+	// chan 引用类型，需要 make 初始化
+	// make(chan 元素类型, [缓冲大小])
+
+	// channel		nil		非空		空的		满了		没满
+	// 接收			阻塞	接收值		阻塞		接收值		接收值
+	// 发送			阻塞	发送值		发送值		阻塞		发送值
+	// 关闭			异常	成功		成功		成功		成功
+	//                      接收至空	返回0,false 接收至空		接收至空
+
+	// 无缓冲（阻塞）
+	a := make(chan int) // 不指定大小
+	go func() {
+		fmt.Println(<-a)
+	}() // 需要有消费者线程，不然报错（fatal error: all goroutines are asleep - deadlock）
+	a <- 10 // 阻塞，直至被消费
+	time.Sleep(time.Second)
+
+	// 有缓存（非阻塞）
+	b := make(chan int, 1) // 超过指定大小会变阻塞
+	b <- 1
+	fmt.Println(<-b)
+
+	// close
+	// 通道是可以被垃圾回收机制回收的，它和关闭文件是不一样的，在结束操作之后关闭文件是必须要做的，但关闭通道不是必须的
+	// 特点：
+	// 1. 对一个关闭的通道再发送值就会导致 panic
+	// 2. 对一个关闭的通道进行接收会一直获取值直到通道为空
+	// 3. 对一个关闭的并且没有值的通道执行接收操作会得到对应类型的零值
+	// 4. 关闭一个已经关闭的通道会导致 panic
+
+	// 2 种方法判断通道关闭
+	// 1. v, ok := <-c
+	// 2. for v := range d (直到取完管道元素，自动退出)
+	c := make(chan int)
+	d := make(chan int, 10)
+	go func() {
+		for i := 0; i < 10; i++ {
+			c <- i
+		}
+		close(c)
+	}()
+
+	go func() {
+		for true {
+			v, ok := <-c
+			fmt.Printf("%d %v \n", v, ok)
+			if !ok {
+				break
+			}
+			d <- v * v
+		}
+		close(d)
+	}()
+
+	time.Sleep(5 * time.Second)
+	for v := range d {
+		fmt.Printf("\t%d\n", v)
+	}
+
+	// 通道作为函数参数时，可以限制成单向通道
+	// chan<- int 只写
+	// <-chan int 只读
+	e := make(chan int)
+	prod := func(c chan<- int) {
+		for i := 0; i < 10; i++ {
+			c <- i
+		}
+	}
+	cons := func(c <-chan int) {
+		for v := range c {
+			fmt.Println(v)
+		}
+	}
+	go prod(e)
+	go cons(e)
+
+	time.Sleep(5 * time.Second)
+
+	// select 多路复用
+	// 场景：监听读取多个 channel
+	// 如果遍历，性能低（通道在接收数据时，没有数据可以接收将会发生阻塞）
+	f := make(chan int)
+	g := make(chan int)
+	go func() {
+		for i := 0; i < 10; i++ {
+			time.Sleep(1 * time.Second)
+			f <- i
+		}
+	}()
+	go func() {
+		for i := 0; i < 10; i++ {
+			time.Sleep(2 * time.Second)
+			g <- i
+		}
+	}()
+	for true {
+		select {
+		case i := <-f:
+			fmt.Printf("%d", i)
+		case j := <-g:
+			fmt.Printf("\t%d", j)
+		}
+		fmt.Println("-----------")
+	}
+}
+
+func reflection() {
+
+	// 反射是指在程序运行期对程序本身进行访问和修改的能力。
+	// 程序在编译时，变量被转换为内存地址，变量名不会被编译器写入到可执行部分。在运行程序时，程序无法获取自身的信息。
+
+	// 反射机制中，任何接口值都是由 具体类型（静态的预先定义好） 和 具体值（程序运行过程中动态改变的） 两部分组成的
+	// t = reflect.TypeOf    具体类型 (Type、Kind)    ->  t.Name(), t.Kind()
+	// v = reflect.ValueOf   具体值                   ->  v.Kind(), v.Int(), v.Float(), v.Interface().(断言)
+
+	a := r{1, 1}
+
+	// 反射读字段
+	v := reflect.ValueOf(a) // 获取 r.value 对象
+	m := v.FieldByName("f") // 获取 f.value 对象
+	n := v.FieldByName("F") // 获取 F.value 对象
+	fmt.Println(m.Int(), n.Int())
+
+	// 反射写字段
+	v = reflect.ValueOf(&a)       // 写操作需传入指针
+	m = v.Elem().FieldByName("f") // v 不是指针类型，使用专有的 Elem() 方法来获取指针
+	// m.SetInt(2)    // Go无法通过反射来操作私有字段，可以通过 unsafe.Pointer 来修改私有变量
+	n = v.Elem().FieldByName("F")
+	n.SetInt(2)
+	fmt.Println(a)
+
+	// 反射调用方法
+	v = reflect.ValueOf(a)
+	m = v.MethodByName("m")
+	n = v.MethodByName("M")
+	// m.Call(nil)    // Go无法通过反射来操作私有方法
+	n.Call(nil)
+
+	// 反射生成实例
+	t := reflect.TypeOf(r{})
+	v = reflect.New(t).Elem()
+	// 初始化写入操作 ...
+	fmt.Println(t, v)
+}
+
+type r struct {
+	f int
+	F int
+}
+
+func (r r) M() {
+	fmt.Println("public method ...")
+}
+
+func (r r) m() {
+	fmt.Println("private method ...")
 }
 
 func interf() {
