@@ -1,0 +1,24 @@
+# permissions for end users to edit appservices.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: appservice-editor-role
+rules:
+- apiGroups:
+  - learning.demo
+  resources:
+  - appservices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - learning.demo
+  resources:
+  - appservices/status
+  verbs:
+  - get

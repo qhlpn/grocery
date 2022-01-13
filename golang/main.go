@@ -1,6 +1,6 @@
 package main
 
-import "golang/pkg" // module/package
+import "golang/pkg" // module/[director]/package
 
 func main() {
 
