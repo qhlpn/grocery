@@ -14,7 +14,8 @@ replace (
 
 )
 
-// go init   初始化当前文件夹, 创建go.mod文件
-// go get    下载依赖包
-// go run    运行
-// go build  编译生成可执行文件
+// go mod init   	初始化当前文件夹, 创建go.mod文件
+// go mod tidy		引用项目需要的依赖到mod文件
+// go get    		下载依赖包
+// go run    		运行
+// go build  		编译生成可执行文件

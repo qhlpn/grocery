@@ -37,6 +37,7 @@ func O() {
 	fmt.Println("call O")
 }
 
+// init 函数在包完成初始化后自动执行，并且执行优先级比 main 函数高。
 func init() {
 	fmt.Println("import pkg init ...")
 }

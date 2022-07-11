@@ -44,7 +44,7 @@ func BaseRun() {
 	// structure()
 
 	// 包
-	// pkg()
+	pkg()
 
 	// 接口
 	// interf()
@@ -446,7 +446,7 @@ func structure() {
 	// type myInt int
 	// func (m myInt) m() {}
 
-	// 继续效果
+	// 继承效果
 	// 通过 结构体嵌套 实现【继承】效果：指可以让某个类型的对象获得另一个类型的对象的属性的方法
 	ch := &child{
 		&parent{
