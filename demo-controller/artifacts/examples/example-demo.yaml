@@ -1,0 +1,7 @@
+apiVersion: demo.com.k8s.io/v1
+kind: Demo
+metadata:
+  name: example-demo
+  namespace: default
+spec:
+  replicas: 1

@@ -67,11 +67,11 @@ func RESTClient() {
 	// 定义返回接收值
 	result := &corev1.PodList{}
 	err = restClient.Get().
-		Namespace("default"). // 查询的 Namespace
-		Resource("pods"). // 查询的资源类型
+		Namespace("default").                                                    // 查询的 Namespace
+		Resource("pods").                                                        // 查询的资源类型
 		VersionedParams(&metav1.ListOptions{Limit: 100}, scheme.ParameterCodec). // 参数及序列化工具
-		Do(context.TODO()). // 发送请求
-		Into(result) // 写入返回值
+		Do(context.TODO()).                                                      // 发送请求
+		Into(result)                                                             // 写入返回值
 	if err != nil {
 		panic(err.Error())
 	}
@@ -95,8 +95,8 @@ func ClientSet() {
 
 	// 查询 default 下的 pods 部门资源信息
 	pods, err := clientset.
-		CoreV1(). // 实例化资源客户端，这里标识实例化 CoreV1Client
-		Pods("default"). // 选择 namespace，为空则表示所有 Namespace
+		CoreV1().                                  // 实例化资源客户端，这里标识实例化 CoreV1Client
+		Pods("default").                           // 选择 namespace，为空则表示所有 Namespace
 		List(context.TODO(), metav1.ListOptions{}) // 查询 pods 列表
 	if err != nil {
 		panic(err.Error())
@@ -240,6 +240,11 @@ func ListWatch() {
 	}
 }
 
+/**
+Informer会将资源缓存在本地以供自己后续使用
+但K8s中运行了很多控制器，有很多资源需要管理，难免会出现一个资源受到多个控制器管理
+为了应对这种常见，可以通过ShareInformer来创建一份供多个控制器共享的缓存，减少系统内存开销，和Watch连接数量。
+*/
 func ShareInformer() {
 
 	clientset, err := kubernetes.NewForConfig(config)
@@ -277,7 +282,3 @@ func SampleController() {
 	// + https://andblog.cn/3196
 	// + https://blog.51cto.com/daixuan/5175780
 }
-
-————————————————
-版权声明：本文为CSDN博主「小博士不知」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。
-原文链接：https://blog.csdn.net/javaldk/article/details/122590998

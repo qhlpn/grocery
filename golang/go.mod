@@ -78,7 +78,10 @@ require (
 // go mod tidy		引用项目需要的依赖到mod文件
 // go get    		下载依赖包
 // go run    		运行
-// go build  		编译生成可执行文件
+// go build  		编译生成可执行文件，在项目目录下
+// go install       主要用来生成库和工具。
+// 					一是编译包文件（无main包），将编译后的包文件放到 pkg 目录下（$GOPATH/pkg）。
+// 					二是编译生成可执行文件（有main包），将可执行文件放到 bin 目录（$GOPATH/bin）。
 
 // 交叉编译
 // go env -w  CGO_ENABLED=0
